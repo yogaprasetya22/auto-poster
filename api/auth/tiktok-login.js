@@ -21,7 +21,8 @@ export default async function handler(req, res) {
     .update(codeVerifier)
     .digest('base64url');
 
-  const scope = 'user.info.basic,video.upload,video.publish';
+  // Scope sesuai konfigurasi Login Kit & Content Posting API
+  const scope = process.env.TIKTOK_SCOPE || 'user.info.basic,video.publish';
   const stateObj = {
     nonce: crypto.randomBytes(8).toString('hex'),
     cv: codeVerifier,
