@@ -1,0 +1,23 @@
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const appId = process.env.META_APP_ID || '1621348919447250';
+  const redirectUri = process.env.META_REDIRECT_URI || 'http://localhost:5173/api/auth/meta-callback';
+  
+  // Scopes for Facebook Pages & Instagram Business
+  const scopes = [
+    'pages_show_list',
+    'pages_read_engagement',
+    'pages_manage_posts',
+    'instagram_basic',
+    'instagram_content_publish'
+  ].join(',');
+
+  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(
+    redirectUri
+  )}&scope=${encodeURIComponent(scopes)}&response_type=code`;
+
+  return res.redirect(302, authUrl);
+}
