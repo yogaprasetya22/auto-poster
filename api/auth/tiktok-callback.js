@@ -23,7 +23,15 @@ export default async function handler(req, res) {
     return res.redirect(302, '/settings?error=' + encodeURIComponent('Konfigurasi environment TikTok atau enkripsi belum lengkap di server'));
   }
 
-  try {
+    const stateRaw = req.query?.state || urlObj.searchParams.get('state');
+    let codeVerifier = '';
+    if (stateRaw) {
+      try {
+        const parsed = JSON.parse(Buffer.from(stateRaw, 'base64url').toString('utf8'));
+        codeVerifier = parsed.cv || '';
+      } catch {}
+    }
+
     // 1. Exchange authorization code for TikTok User Access Token
     const tokenUrl = 'https://open.tiktokapis.com/v2/oauth/token/';
     const bodyParams = new URLSearchParams({
@@ -33,6 +41,10 @@ export default async function handler(req, res) {
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
     });
+
+    if (codeVerifier) {
+      bodyParams.append('code_verifier', codeVerifier);
+    }
 
     const tokenRes = await fetch(tokenUrl, {
       method: 'POST',
