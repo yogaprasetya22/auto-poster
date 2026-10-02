@@ -82,7 +82,7 @@ export function ConnectPlatformModal({ platform, isOpen, onClose, onSuccess }: C
     try {
       let encryptedToken = accessToken
       try {
-        const encryptionKey = import.meta.env.VITE_ENCRYPTION_MASTER_KEY || '4f8a9b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcd'
+        const encryptionKey = import.meta.env.VITE_ENCRYPTION_MASTER_KEY || ''
         const { data: enc, error: encErr } = await supabase.rpc('encrypt_secret', {
           plain_text: accessToken,
           secret_key: encryptionKey

@@ -183,7 +183,8 @@ async function pollTarget(target) {
 
 async function decrypt(ciphertext) {
   if (!ciphertext) return '';
-  const key = process.env.ENCRYPTION_MASTER_KEY || '4f8a9b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcd';
+  const key = process.env.ENCRYPTION_MASTER_KEY;
+  if (!key) throw new Error('ENCRYPTION_MASTER_KEY is not defined');
   try {
     const { data, error } = await supabase.rpc('decrypt_secret', {
       ciphertext, secret_key: key,

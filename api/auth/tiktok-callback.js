@@ -16,8 +16,7 @@ export default async function handler(req, res) {
 
   const clientKey = process.env.TIKTOK_CLIENT_KEY || 'awodif1ekfi8ijp2';
   const clientSecret = process.env.TIKTOK_CLIENT_SECRET || 'jmiEJCDNQg1NkD0CbQU5nmkUNi3Cygos';
-  const redirectUri = process.env.TIKTOK_REDIRECT_URI || 'https://auto-poster-blush.vercel.app/api/auth/tiktok-callback';
-  const encryptionKey = process.env.ENCRYPTION_MASTER_KEY || '4f8a9b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcd';
+  const encryptionKey = process.env.ENCRYPTION_MASTER_KEY;
 
   try {
     // 1. Exchange authorization code for TikTok User Access Token

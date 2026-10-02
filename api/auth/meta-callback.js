@@ -16,8 +16,7 @@ export default async function handler(req, res) {
 
   const appId = process.env.META_APP_ID || '1621348919447250';
   const appSecret = process.env.META_APP_SECRET || '3a563d45f9b2b0f8ec33084e859cf52b';
-  const redirectUri = process.env.META_REDIRECT_URI || 'http://localhost:5173/api/auth/meta-callback';
-  const encryptionKey = process.env.ENCRYPTION_MASTER_KEY || '4f8a9b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcd';
+  const encryptionKey = process.env.ENCRYPTION_MASTER_KEY;
 
   try {
     // 1. Exchange authorization code for short-lived access token
