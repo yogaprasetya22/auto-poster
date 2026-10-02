@@ -93,6 +93,42 @@ export default defineConfig({
             return
           }
 
+          if (req.url?.startsWith('/api/auth/tiktok-login') && req.method === 'GET') {
+            try {
+              if (!customRes.redirect) {
+                customRes.redirect = function (status: number, url: string) {
+                  this.statusCode = status
+                  this.setHeader('Location', url)
+                  this.end()
+                  return this
+                }
+              }
+              const m: any = await import('./api/auth/tiktok-login.js' as any)
+              await m.default(req, customRes)
+            } catch (err: any) {
+              customRes.status(500).json({ success: false, error: err.message })
+            }
+            return
+          }
+
+          if ((req.url?.startsWith('/auth/tiktok-callback') || req.url?.startsWith('/api/auth/tiktok-callback')) && req.method === 'GET') {
+            try {
+              if (!customRes.redirect) {
+                customRes.redirect = function (status: number, url: string) {
+                  this.statusCode = status
+                  this.setHeader('Location', url)
+                  this.end()
+                  return this
+                }
+              }
+              const m: any = await import('./api/auth/tiktok-callback.js' as any)
+              await m.default(req, customRes)
+            } catch (err: any) {
+              customRes.status(500).json({ success: false, error: err.message })
+            }
+            return
+          }
+
           if (req.url?.startsWith('/api/cron/dispatcher')) {
             try {
               const m: any = await import('./api/cron/dispatcher.js' as any)

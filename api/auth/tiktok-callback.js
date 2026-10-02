@@ -14,8 +14,9 @@ export default async function handler(req, res) {
     return res.redirect(302, '/settings?error=' + encodeURIComponent(error || 'No code returned from TikTok'));
   }
 
-  const clientKey = process.env.TIKTOK_CLIENT_KEY || 'awodif1ekfi8ijp2';
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET || 'jmiEJCDNQg1NkD0CbQU5nmkUNi3Cygos';
+  const clientKey = process.env.TIKTOK_CLIENT_KEY || 'sbaw5ygrueuxsfkteq';
+  const clientSecret = process.env.TIKTOK_CLIENT_SECRET || '5xjLhUP3IsKvuSnt2PO3whUeiEJz8piE';
+  const redirectUri = process.env.TIKTOK_REDIRECT_URI || 'http://localhost:5173/auth/tiktok-callback';
   const encryptionKey = process.env.ENCRYPTION_MASTER_KEY;
 
   try {
