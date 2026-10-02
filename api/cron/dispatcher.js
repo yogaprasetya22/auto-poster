@@ -60,7 +60,9 @@ async function initTarget(post, target) {
 
   try {
     if (target.platform === 'instagram') {
-      const r = await fetch(`https://graph.facebook.com/v19.0/${target.connected_accounts.platform_user_id}/media`, {
+      const isIgUserToken = token.startsWith('IGAA');
+      const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
+      const r = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,11 +129,13 @@ async function pollTarget(target) {
 
   try {
     if (target.platform === 'instagram') {
-      const r = await fetch(`https://graph.facebook.com/v19.0/${target.async_container_id}?fields=status_code&access_token=${token}`);
+      const isIgUserToken = token.startsWith('IGAA');
+      const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
+      const r = await fetch(`${apiHost}/${target.async_container_id}?fields=status_code&access_token=${token}`);
       const d = await r.json();
 
       if (d.status_code === 'FINISHED') {
-        const pub = await fetch(`https://graph.facebook.com/v19.0/${target.connected_accounts.platform_user_id}/media_publish`, {
+        const pub = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media_publish`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ creation_id: target.async_container_id, access_token: token }),
