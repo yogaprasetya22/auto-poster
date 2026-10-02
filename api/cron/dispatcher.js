@@ -26,11 +26,11 @@ export default async function handler(req, res) {
       for (const t of active) await pollTarget(t);
     }
 
-    // Phase 2: Pick up scheduled posts
+    // Phase 2: Pick up scheduled posts or posts with pending targets
     const { data: due } = await supabase
       .from('posts')
       .select('*, post_targets(*, connected_accounts(*))')
-      .eq('status', 'SCHEDULED')
+      .in('status', ['SCHEDULED', 'PROCESSING'])
       .lte('scheduled_at', new Date().toISOString())
       .order('scheduled_at')
       .limit(1);
@@ -56,22 +56,31 @@ export default async function handler(req, res) {
 
 async function initTarget(post, target) {
   const token = await decrypt(target.connected_accounts.access_token_encrypted);
-  const mediaUrl = post.gdrive_stream_url || post.gdrive_lh3_url;
+  // Prioritaskan URL publik lh3.googleusercontent.com karena server Instagram/TikTok menolak localhost
+  const mediaUrl = post.gdrive_lh3_url || post.gdrive_stream_url;
 
   try {
     if (target.platform === 'instagram') {
       const isIgUserToken = token.startsWith('IGAA');
       const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
+      const bodyPayload = {
+        caption: post.content_text,
+        access_token: token,
+      };
+
+      if (post.media_type === 'VIDEO') {
+        bodyPayload.media_type = 'REELS';
+        bodyPayload.video_url = mediaUrl;
+        bodyPayload.share_to_feed = true;
+      } else {
+        // Untuk single image, API Instagram Graph hanya menerima image_url (tidak boleh ada media_type: IMAGE)
+        bodyPayload.image_url = mediaUrl;
+      }
+
       const r = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          media_type: post.media_type === 'VIDEO' ? 'REELS' : 'IMAGE',
-          [post.media_type === 'VIDEO' ? 'video_url' : 'image_url']: mediaUrl,
-          caption: post.content_text,
-          share_to_feed: true,
-          access_token: token,
-        }),
+        body: JSON.stringify(bodyPayload),
       });
       const d = await r.json();
       if (!d.id) throw new Error(JSON.stringify(d.error || d));
