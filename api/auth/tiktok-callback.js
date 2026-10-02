@@ -23,6 +23,7 @@ export default async function handler(req, res) {
     return res.redirect(302, '/settings?error=' + encodeURIComponent('Konfigurasi environment TikTok atau enkripsi belum lengkap di server'));
   }
 
+  try {
     const stateRaw = req.query?.state || urlObj.searchParams.get('state');
     let codeVerifier = '';
     if (stateRaw) {
