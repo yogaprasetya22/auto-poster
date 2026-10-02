@@ -106,19 +106,15 @@ export default async function handler(req, res) {
       .upsert(
         {
           platform: 'tiktok',
-          account_id: openId || `tiktok_${Date.now()}`,
+          platform_user_id: openId || `tiktok_${Date.now()}`,
           account_name: `@${username} (${displayName})`,
-          encrypted_token: encryptedToken,
+          account_avatar_url: avatarUrl || null,
+          access_token_encrypted: encryptedToken,
           token_expires_at: expiresAt,
-          status: 'active',
-          metadata: {
-            open_id: openId,
-            refresh_token: refreshToken,
-            avatar_url: avatarUrl,
-          },
+          is_active: true,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'platform,account_id' }
+        { onConflict: 'platform,platform_user_id' }
       );
 
     if (upsertErr) {
