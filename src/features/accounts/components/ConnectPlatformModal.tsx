@@ -98,7 +98,7 @@ export function ConnectPlatformModal({ platform, isOpen, onClose, onSuccess }: C
         platform_user_id: platformUserId.trim(),
         access_token_encrypted: encryptedToken,
         is_active: true,
-        token_expires_at: new Date(Date.now() + 60 * 24 * 3600_000).toISOString(),
+        token_expires_at: new Date(Date.now() + 365 * 24 * 3600_000).toISOString(),
       }, { onConflict: 'platform,platform_user_id' })
 
       if (error) throw error

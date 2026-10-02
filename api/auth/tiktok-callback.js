@@ -97,8 +97,8 @@ export default async function handler(req, res) {
       });
       if (!encErr && encData) encryptedToken = encData;
     } catch {}
-
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    // Set token expiration to 1 year (365 days)
+    const expiresAt = new Date(Date.now() + 365 * 24 * 3600_000).toISOString();
 
     // 3. Upsert into Supabase connected_accounts
     const { error: upsertErr } = await supabase
