@@ -17,6 +17,7 @@ interface PlatformDef {
   desc: string
   badge: string
   supportsMetaOAuth?: boolean
+  supportsTikTokOAuth?: boolean
 }
 
 const SUPPORTED_PLATFORMS: PlatformDef[] = [
@@ -53,6 +54,7 @@ const SUPPORTED_PLATFORMS: PlatformDef[] = [
     iconBg: 'bg-black text-white dark:bg-white dark:text-black',
     desc: 'Direct video upload (max 10 menit) melalui TikTok Open API',
     badge: 'Direct Post',
+    supportsTikTokOAuth: true,
   },
 ]
 
@@ -105,6 +107,11 @@ export function SettingsPage() {
   function handleMetaConnect() {
     // Redirect langsung ke serverless OAuth Meta initiator
     window.location.href = '/api/auth/meta-login'
+  }
+
+  function handleTikTokConnect() {
+    // Redirect langsung ke serverless OAuth TikTok initiator
+    window.location.href = '/api/auth/tiktok-login'
   }
 
   return (
@@ -162,7 +169,16 @@ export function SettingsPage() {
                       <button
                         onClick={handleMetaConnect}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-                        title="Otomatis login tanpa input form"
+                        title="Otomatis login Meta tanpa input form"
+                      >
+                        <LogIn size={14} />
+                        Auto Connect
+                      </button>
+                    ) : platform.supportsTikTokOAuth ? (
+                      <button
+                        onClick={handleTikTokConnect}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                        title="Otomatis login TikTok OAuth tanpa input form"
                       >
                         <LogIn size={14} />
                         Auto Connect
