@@ -14,9 +14,14 @@ export default async function handler(req, res) {
     return res.redirect(302, '/settings?error=' + encodeURIComponent(error || 'No code returned from Meta'));
   }
 
-  const appId = process.env.META_APP_ID || '1621348919447250';
-  const appSecret = process.env.META_APP_SECRET || '3a563d45f9b2b0f8ec33084e859cf52b';
+  const appId = process.env.META_APP_ID;
+  const appSecret = process.env.META_APP_SECRET;
+  const redirectUri = process.env.META_REDIRECT_URI;
   const encryptionKey = process.env.ENCRYPTION_MASTER_KEY;
+
+  if (!appId || !appSecret || !redirectUri || !encryptionKey) {
+    return res.redirect(302, '/settings?error=' + encodeURIComponent('Konfigurasi Meta atau Enkripsi belum lengkap di server'));
+  }
 
   try {
     // 1. Exchange authorization code for short-lived access token

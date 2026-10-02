@@ -3,8 +3,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const appId = process.env.META_APP_ID || '1621348919447250';
-  const redirectUri = process.env.META_REDIRECT_URI || 'http://localhost:5173/api/auth/meta-callback';
+  const appId = process.env.META_APP_ID;
+  const redirectUri = process.env.META_REDIRECT_URI;
+
+  if (!appId || !redirectUri) {
+    return res.status(500).json({ error: 'Missing META_APP_ID or META_REDIRECT_URI environment variables' });
+  }
   
   // Scopes for Facebook Pages & Instagram Business
   const scopes = [

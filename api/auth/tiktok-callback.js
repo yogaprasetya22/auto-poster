@@ -14,10 +14,14 @@ export default async function handler(req, res) {
     return res.redirect(302, '/settings?error=' + encodeURIComponent(error || 'No code returned from TikTok'));
   }
 
-  const clientKey = process.env.TIKTOK_CLIENT_KEY || 'sbaw5ygrueuxsfkteq';
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET || '5xjLhUP3IsKvuSnt2PO3whUeiEJz8piE';
-  const redirectUri = process.env.TIKTOK_REDIRECT_URI || 'http://localhost:5173/auth/tiktok-callback';
+  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  const redirectUri = process.env.TIKTOK_REDIRECT_URI;
   const encryptionKey = process.env.ENCRYPTION_MASTER_KEY;
+
+  if (!clientKey || !clientSecret || !redirectUri || !encryptionKey) {
+    return res.redirect(302, '/settings?error=' + encodeURIComponent('Konfigurasi environment TikTok atau enkripsi belum lengkap di server'));
+  }
 
   try {
     // 1. Exchange authorization code for TikTok User Access Token
