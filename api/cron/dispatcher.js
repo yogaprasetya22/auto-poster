@@ -88,18 +88,51 @@ async function initTarget(post, target) {
         status: 'IN_PROGRESS', async_container_id: d.id, last_polled_at: new Date().toISOString(),
       }).eq('id', target.id);
     } else if (target.platform === 'tiktok') {
-      const r = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+      // TikTok Open API: Unduk file video dari URL media lalu upload via chunked FILE_UPLOAD
+      const videoRes = await fetch(mediaUrl);
+      if (!videoRes.ok) throw new Error(`Gagal mengunduh video untuk TikTok (${videoRes.status})`);
+      const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+      const videoSize = videoBuffer.length;
+
+      const initR = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          post_info: { title: post.content_text.slice(0, 150), privacy_level: 'PUBLIC_TO_EVERYONE' },
-          source_info: { source: 'PULL_FROM_URL', video_url: mediaUrl },
+          post_info: {
+            title: post.content_text.slice(0, 150),
+            privacy_level: 'SELF_ONLY', // Mendukung akun Sandbox / Private
+          },
+          source_info: {
+            source: 'FILE_UPLOAD',
+            video_size: videoSize,
+            chunk_size: videoSize,
+            total_chunk_count: 1,
+          },
         }),
       });
-      const d = await r.json();
-      if (!d.data?.publish_id) throw new Error(JSON.stringify(d.error || d));
+      const initData = await initR.json();
+      if (!initData.data?.publish_id || !initData.data?.upload_url) {
+        throw new Error(JSON.stringify(initData.error || initData));
+      }
+
+      // Upload file byte stream ke TikTok Upload Gateway
+      const uploadR = await fetch(initData.data.upload_url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'video/mp4',
+          'Content-Range': `bytes 0-${videoSize - 1}/${videoSize}`,
+        },
+        body: videoBuffer,
+      });
+
+      if (!uploadR.ok && uploadR.status !== 201) {
+        throw new Error(`Gagal mengunggah video stream ke TikTok Gateway (${uploadR.status})`);
+      }
+
       await supabase.from('post_targets').update({
-        status: 'IN_PROGRESS', async_container_id: d.data.publish_id, last_polled_at: new Date().toISOString(),
+        status: 'IN_PROGRESS',
+        async_container_id: initData.data.publish_id,
+        last_polled_at: new Date().toISOString(),
       }).eq('id', target.id);
     } else if (target.platform === 'facebook_page') {
       const pageId = target.connected_accounts.platform_user_id;
@@ -163,7 +196,7 @@ async function pollTarget(target) {
         }).eq('id', target.id);
       }
     } else if (target.platform === 'tiktok') {
-      const r = await fetch('https://open.tiktokapis.com/v2/post/publish/status_fetch/', {
+      const r = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ publish_id: target.async_container_id }),
@@ -172,7 +205,7 @@ async function pollTarget(target) {
       const st = d.data?.status;
       if (st === 'PUBLISH_COMPLETE') {
         await supabase.from('post_targets').update({
-          status: 'SUCCESS', external_post_id: d.data.publicaly_available_post_id?.[0] || '', executed_at: new Date().toISOString(),
+          status: 'SUCCESS', external_post_id: d.data.publicaly_available_post_id?.[0] || target.async_container_id, executed_at: new Date().toISOString(),
         }).eq('id', target.id);
       } else if (st === 'FAILED') {
         throw new Error(d.data?.fail_reason || 'TikTok publish failed');
