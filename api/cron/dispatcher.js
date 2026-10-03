@@ -198,17 +198,22 @@ async function initTarget(post, target) {
         status: 'IN_PROGRESS', async_container_id: d.id, last_polled_at: new Date().toISOString(),
       }).eq('id', target.id);
     } else if (target.platform === 'tiktok') {
-      // TikTok Open API: Ambil buffer video dari local path atau via fetch URL
+      // TikTok Open API: Ambil buffer video dari local path, direct Google Drive, atau streaming URL
       let videoBuffer;
       if (localFilePath && fs.existsSync(localFilePath)) {
         videoBuffer = fs.readFileSync(localFilePath);
-      } else if (mediaUrl) {
-        const fetchUrl = mediaUrl.startsWith('http') ? mediaUrl : `http://localhost:5173${mediaUrl}`;
-        const videoRes = await fetch(fetchUrl);
+      } else {
+        let downloadUrl = mediaUrl;
+        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+          downloadUrl = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download`;
+        } else if (mediaUrl && !mediaUrl.startsWith('http')) {
+          downloadUrl = `http://localhost:5173${mediaUrl}`;
+        }
+
+        if (!downloadUrl) throw new Error('Video untuk TikTok tidak ditemukan');
+        const videoRes = await fetch(downloadUrl);
         if (!videoRes.ok) throw new Error(`Gagal mengunduh video untuk TikTok (${videoRes.status})`);
         videoBuffer = Buffer.from(await videoRes.arrayBuffer());
-      } else {
-        throw new Error('Video untuk TikTok tidak ditemukan');
       }
       const videoSize = videoBuffer.length;
 
@@ -257,9 +262,25 @@ async function initTarget(post, target) {
       let postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/feed`;
       let postBody = { message: post.content_text, access_token: token };
 
-      if (post.media_type === 'IMAGE' && mediaUrl) {
+      if (post.media_type === 'VIDEO') {
+        postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/videos`;
+        // Gunakan direct download URL Google Drive yang mengembalikan HTTP 200 stream MP4
+        let videoFileUrl = mediaUrl;
+        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+          videoFileUrl = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download`;
+        }
+        postBody = {
+          description: post.content_text,
+          file_url: videoFileUrl,
+          access_token: token,
+        };
+      } else if (post.media_type === 'IMAGE' && mediaUrl) {
         postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/photos`;
-        postBody = { caption: post.content_text, url: mediaUrl, access_token: token };
+        let imgUrl = mediaUrl;
+        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+          imgUrl = post.gdrive_lh3_url || `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download`;
+        }
+        postBody = { caption: post.content_text, url: imgUrl, access_token: token };
       }
 
       const r = await fetch(postEndpoint, {
