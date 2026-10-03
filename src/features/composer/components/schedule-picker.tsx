@@ -1,4 +1,4 @@
-import { useComposerStore } from '../store/useComposerStore'
+import { useComposerStore } from '../store/use-composer-store'
 import { DatePickerDemo } from '@/shared/components/ui/date-picker-demo'
 
 export function SchedulePicker() {

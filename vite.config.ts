@@ -129,6 +129,25 @@ export default defineConfig({
             return
           }
 
+          if (req.url?.startsWith('/api/ai/caption') && req.method === 'POST') {
+            try {
+              let bodyStr = ''
+              req.on('data', (chunk: any) => { bodyStr += chunk })
+              req.on('end', async () => {
+                try {
+                  ;(req as any).body = bodyStr ? JSON.parse(bodyStr) : {}
+                } catch {
+                  ;(req as any).body = {}
+                }
+                const m: any = await import('./api/ai/caption.js' as any)
+                await m.default(req, customRes)
+              })
+            } catch (err: any) {
+              customRes.status(500).json({ success: false, error: err.message })
+            }
+            return
+          }
+
           if (req.url?.startsWith('/api/cron/dispatcher')) {
             try {
               const m: any = await import('./api/cron/dispatcher.js' as any)
@@ -141,6 +160,29 @@ export default defineConfig({
 
           next()
         })
+
+        // Background Heartbeat Dispatcher (Jalankan setiap 10 detik agar jadwal tidak macet di PENDING)
+        let isDispatching = false
+        setInterval(async () => {
+          if (isDispatching) return
+          isDispatching = true
+          try {
+            const m: any = await import('./api/cron/dispatcher.js' as any)
+            const mockReq = { method: 'GET', headers: {} }
+            const mockRes = {
+              statusCode: 200,
+              status(code: number) { this.statusCode = code; return this },
+              json(_d: any) { return this },
+              setHeader() { return this },
+              end() { return this }
+            }
+            await m.default(mockReq, mockRes)
+          } catch (e: any) {
+            // silent catch
+          } finally {
+            isDispatching = false
+          }
+        }, 10000)
       }
     }
   ],

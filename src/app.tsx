@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'sonner'
-import { MainLayout } from '@/shared/components/layout/MainLayout'
-import { DashboardPage } from '@/features/dashboard/DashboardPage'
-import { ComposerPage } from '@/features/composer/ComposerPage'
-import { HistoryPage } from '@/features/history/HistoryPage'
-import { SettingsPage } from '@/features/accounts/SettingsPage'
+import { MainLayout } from '@/shared/components/layout/main-layout'
+import { DashboardPage } from '@/features/dashboard/dashboard-page'
+import { ComposerPage } from '@/features/composer/composer-page'
+import { HistoryPage } from '@/features/history/history-page'
+import { SettingsPage } from '@/features/accounts/settings-page'
 
-import { TermsPage } from '@/features/legal/TermsPage'
-import { PrivacyPage } from '@/features/legal/PrivacyPage'
+import { TermsPage } from '@/features/legal/terms-page'
+import { PrivacyPage } from '@/features/legal/privacy-page'
 
 export function App() {
   return (

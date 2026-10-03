@@ -1,4 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
+import dns from 'dns';
+import fs from 'fs';
+import path from 'path';
+
+// Pastikan koneksi keluar ke Meta Graph API memprioritaskan IPv4 untuk menghindari ETIMEDOUT / EACCES pada IPv6
+if (dns && dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
@@ -26,23 +34,58 @@ export default async function handler(req, res) {
       for (const t of active) await pollTarget(t);
     }
 
-    // Phase 2: Pick up scheduled posts or posts with pending targets
-    const { data: due } = await supabase
-      .from('posts')
-      .select('*, post_targets(*, connected_accounts(*))')
-      .in('status', ['SCHEDULED', 'PROCESSING'])
-      .lte('scheduled_at', new Date().toISOString())
-      .order('scheduled_at')
-      .limit(1);
+    // Phase 2: Pick up scheduled posts or any targets that are currently PENDING (e.g. from Retry)
+    const { data: pendingTargets } = await supabase
+      .from('post_targets')
+      .select('*, connected_accounts(*), posts(*)')
+      .eq('status', 'PENDING')
+      .limit(4);
 
-    if (due?.length) {
-      const post = due[0];
-      await supabase.from('posts').update({ status: 'PROCESSING' }).eq('id', post.id);
-
-      for (const t of post.post_targets) {
-        if (t.status === 'PENDING') {
-          await initTarget(post, t);
+    if (pendingTargets && pendingTargets.length > 0) {
+      for (const t of pendingTargets) {
+        if (t.posts) {
+          await supabase.from('posts').update({ status: 'PROCESSING' }).eq('id', t.posts.id);
+          await initTarget(t.posts, t);
           await sleep(2000); // stagger jitter
+        }
+      }
+    } else {
+      const { data: due } = await supabase
+        .from('posts')
+        .select('*, post_targets(*, connected_accounts(*))')
+        .in('status', ['SCHEDULED', 'PROCESSING'])
+        .lte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at')
+        .limit(1);
+
+      if (due?.length) {
+        const post = due[0];
+        await supabase.from('posts').update({ status: 'PROCESSING' }).eq('id', post.id);
+
+        for (const t of post.post_targets) {
+          if (t.status === 'PENDING') {
+            await initTarget(post, t);
+            await sleep(2000); // stagger jitter
+          }
+        }
+
+        // Sync status parent post jika seluruh target sudah selesai
+        const { data: updatedTargets } = await supabase
+          .from('post_targets')
+          .select('status')
+          .eq('post_id', post.id);
+
+        if (updatedTargets && updatedTargets.length > 0) {
+          const stillPending = updatedTargets.some(
+            (t) => t.status === 'PENDING' || t.status === 'IN_PROGRESS'
+          );
+          if (!stillPending) {
+            const anySuccess = updatedTargets.some((t) => t.status === 'SUCCESS');
+            await supabase
+              .from('posts')
+              .update({ status: anySuccess ? 'COMPLETED' : 'FAILED' })
+              .eq('id', post.id);
+          }
         }
       }
     }
@@ -56,8 +99,69 @@ export default async function handler(req, res) {
 
 async function initTarget(post, target) {
   const token = await decrypt(target.connected_accounts.access_token_encrypted);
-  // Prioritaskan URL publik lh3.googleusercontent.com karena server Instagram/TikTok menolak localhost
-  const mediaUrl = post.gdrive_lh3_url || post.gdrive_stream_url;
+  let mediaUrl = post.gdrive_lh3_url || post.gdrive_stream_url;
+
+  // Jika URL media berupa relative path lokal atau memiliki file tersimpan di disk lokal
+  let localFilePath = null;
+  if (mediaUrl && mediaUrl.startsWith('/')) {
+    localFilePath = path.join(process.cwd(), 'public', mediaUrl.replace(/^\//, ''));
+    if (!fs.existsSync(localFilePath)) {
+      localFilePath = path.join(process.cwd(), mediaUrl.replace(/^\//, ''));
+    }
+  }
+
+  // Cek apakah ada file lokal di generated-promo yang cocok
+  if (!localFilePath || !fs.existsSync(localFilePath)) {
+    const promoDir = path.join(process.cwd(), 'public', 'generated-promo');
+    if (fs.existsSync(promoDir)) {
+      const files = fs.readdirSync(promoDir);
+      // Cocokkan berdasarkan nama file dari url jika ada
+      const match = files.find((f) => mediaUrl?.includes(f) || (post.title && f.endsWith('.mp4')));
+      if (match) {
+        localFilePath = path.join(promoDir, match);
+      }
+    }
+  }
+
+  // 0. Safety Guard: Cek Batasan Posting Harian (Maksimal 5 posting/hari per akun untuk mencegah spam risk OpenAPI)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: dailyCount } = await supabase
+    .from('post_targets')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', target.account_id)
+    .in('status', ['SUCCESS', 'IN_PROGRESS'])
+    .gte('executed_at', oneDayAgo);
+
+  const DAILY_MAX = 5;
+  if (dailyCount && dailyCount >= DAILY_MAX) {
+    throw new Error(
+      `Batas aman posting harian tercapai (${dailyCount}/${DAILY_MAX} posting dalam 24 jam). Eksekusi ditahan untuk mencegah pemblokiran spam oleh ${target.platform.toUpperCase()}.`
+    );
+  }
+
+  // 0.1 MODE DEVELOPMENT / DRY-RUN SIMULASI
+  // Jika postingan di-flag sebagai simulasi atau env DISPATCHER_DRY_RUN=true,
+  // maka jadwal, upload GDrive, dan riwayat dieksekusi 100% tanpa menembak endpoint live OpenAPI
+  const isSimulation = Boolean(
+    post.media_metadata?.is_simulation ||
+    process.env.DISPATCHER_DRY_RUN === 'true'
+  );
+
+  if (isSimulation) {
+    console.log(`[SIMULATION MODE] Target ${target.platform} di-simulate SUCCESS tanpa kirim ke platform nyata.`);
+    await supabase.from('post_targets').update({
+      status: 'SUCCESS',
+      remote_post_id: `sim-${Date.now()}-${target.platform}`,
+      executed_at: new Date().toISOString(),
+      error_payload: {
+        mode: 'SIMULATION_DEV_MODE',
+        message: 'Mode simulasi pengujian aktif: File tersimpan di Google Drive & jadwal teruji tanpa menembak live API platform.',
+        gdrive_file_id: post.gdrive_file_id,
+        gdrive_stream_url: post.gdrive_stream_url,
+      },
+    }).eq('id', target.id);
+    return;
+  }
 
   try {
     if (target.platform === 'instagram') {
@@ -70,7 +174,13 @@ async function initTarget(post, target) {
 
       if (post.media_type === 'VIDEO') {
         bodyPayload.media_type = 'REELS';
-        bodyPayload.video_url = mediaUrl;
+        // Meta crawler tidak selalu mengikuti HTTP 303 redirect dari drive.google.com/uc.
+        // Direct link drive.usercontent.google.com langsung mengembalikan HTTP 200 dengan header Content-Type: video/mp4!
+        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+          bodyPayload.video_url = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download`;
+        } else {
+          bodyPayload.video_url = mediaUrl;
+        }
         bodyPayload.share_to_feed = true;
       } else {
         // Untuk single image, API Instagram Graph hanya menerima image_url (tidak boleh ada media_type: IMAGE)
@@ -88,10 +198,18 @@ async function initTarget(post, target) {
         status: 'IN_PROGRESS', async_container_id: d.id, last_polled_at: new Date().toISOString(),
       }).eq('id', target.id);
     } else if (target.platform === 'tiktok') {
-      // TikTok Open API: Unduk file video dari URL media lalu upload via chunked FILE_UPLOAD
-      const videoRes = await fetch(mediaUrl);
-      if (!videoRes.ok) throw new Error(`Gagal mengunduh video untuk TikTok (${videoRes.status})`);
-      const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+      // TikTok Open API: Ambil buffer video dari local path atau via fetch URL
+      let videoBuffer;
+      if (localFilePath && fs.existsSync(localFilePath)) {
+        videoBuffer = fs.readFileSync(localFilePath);
+      } else if (mediaUrl) {
+        const fetchUrl = mediaUrl.startsWith('http') ? mediaUrl : `http://localhost:5173${mediaUrl}`;
+        const videoRes = await fetch(fetchUrl);
+        if (!videoRes.ok) throw new Error(`Gagal mengunduh video untuk TikTok (${videoRes.status})`);
+        videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+      } else {
+        throw new Error('Video untuk TikTok tidak ditemukan');
+      }
       const videoSize = videoBuffer.length;
 
       const initR = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
@@ -154,6 +272,7 @@ async function initTarget(post, target) {
 
       await supabase.from('post_targets').update({
         status: 'SUCCESS',
+        error_payload: null,
         external_post_id: d.id,
         external_post_url: `https://www.facebook.com/${d.id}`,
         executed_at: new Date().toISOString(),
@@ -167,13 +286,21 @@ async function initTarget(post, target) {
 }
 
 async function pollTarget(target) {
+  // Cek apakah target baru saja dicek dalam interval backoff (minimal 15 detik) untuk menghemat rate limit & CPU
+  if (target.last_polled_at) {
+    const elapsedSinceLastPoll = Date.now() - new Date(target.last_polled_at).getTime();
+    if (elapsedSinceLastPoll < 15000) {
+      return; // Tunggu siklus heartbeat berikutnya
+    }
+  }
+
   const token = await decrypt(target.connected_accounts.access_token_encrypted);
 
   try {
     if (target.platform === 'instagram') {
       const isIgUserToken = token.startsWith('IGAA');
       const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
-      const r = await fetch(`${apiHost}/${target.async_container_id}?fields=status_code&access_token=${token}`);
+      const r = await fetch(`${apiHost}/${target.async_container_id}?fields=status_code,status,error_message&access_token=${token}`);
       const d = await r.json();
 
       if (d.status_code === 'FINISHED') {
@@ -185,14 +312,24 @@ async function pollTarget(target) {
         const pd = await pub.json();
         if (!pd.id) throw new Error(JSON.stringify(pd.error || pd));
         await supabase.from('post_targets').update({
-          status: 'SUCCESS', external_post_id: pd.id, executed_at: new Date().toISOString(),
+          status: 'SUCCESS', error_payload: null, external_post_id: pd.id, executed_at: new Date().toISOString(),
         }).eq('id', target.id);
       } else if (d.status_code === 'ERROR') {
-        throw new Error('Meta transcoding failed');
+        const errMsg = d.error_message || d.status || 'Meta transcoding failed (Spesifikasi video tidak didukung atau URL tidak dapat diunduh server Meta)';
+        throw new Error(errMsg);
       } else {
-        if (target.polling_attempts >= 10) throw new Error('Transcoding timeout (50 min)');
+        // Hitung durasi nyata sejak container dibuat / diproses
+        const initiatedTime = target.executed_at || target.created_at || new Date().toISOString();
+        const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
+        
+        // Timeout realistis: 15 menit waktu nyata Meta
+        if (minutesElapsed > 15) {
+          throw new Error('Meta transcoding timeout (>15 menit waktu nyata)');
+        }
+
         await supabase.from('post_targets').update({
-          polling_attempts: target.polling_attempts + 1, last_polled_at: new Date().toISOString(),
+          polling_attempts: (target.polling_attempts || 0) + 1,
+          last_polled_at: new Date().toISOString(),
         }).eq('id', target.id);
       }
     } else if (target.platform === 'tiktok') {
@@ -205,14 +342,19 @@ async function pollTarget(target) {
       const st = d.data?.status;
       if (st === 'PUBLISH_COMPLETE') {
         await supabase.from('post_targets').update({
-          status: 'SUCCESS', external_post_id: d.data.publicaly_available_post_id?.[0] || target.async_container_id, executed_at: new Date().toISOString(),
+          status: 'SUCCESS', error_payload: null, external_post_id: d.data.publicaly_available_post_id?.[0] || target.async_container_id, executed_at: new Date().toISOString(),
         }).eq('id', target.id);
       } else if (st === 'FAILED') {
         throw new Error(d.data?.fail_reason || 'TikTok publish failed');
       } else {
-        if (target.polling_attempts >= 10) throw new Error('TikTok transcoding timeout');
+        const initiatedTime = target.executed_at || target.created_at || new Date().toISOString();
+        const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
+        if (minutesElapsed > 15) {
+          throw new Error('TikTok transcoding timeout (>15 menit waktu nyata)');
+        }
         await supabase.from('post_targets').update({
-          polling_attempts: target.polling_attempts + 1, last_polled_at: new Date().toISOString(),
+          polling_attempts: (target.polling_attempts || 0) + 1,
+          last_polled_at: new Date().toISOString(),
         }).eq('id', target.id);
       }
     }
@@ -221,6 +363,27 @@ async function pollTarget(target) {
       status: 'FAILED', error_payload: { message: err.message }, executed_at: new Date().toISOString(),
     }).eq('id', target.id);
   }
+
+  // Sinkronkan status parent post
+  try {
+    const { data: updatedTargets } = await supabase
+      .from('post_targets')
+      .select('status')
+      .eq('post_id', target.post_id);
+
+    if (updatedTargets && updatedTargets.length > 0) {
+      const stillPending = updatedTargets.some(
+        (t) => t.status === 'PENDING' || t.status === 'IN_PROGRESS'
+      );
+      if (!stillPending) {
+        const anySuccess = updatedTargets.some((t) => t.status === 'SUCCESS');
+        await supabase
+          .from('posts')
+          .update({ status: anySuccess ? 'COMPLETED' : 'FAILED' })
+          .eq('id', target.post_id);
+      }
+    }
+  } catch {}
 }
 
 async function decrypt(ciphertext) {

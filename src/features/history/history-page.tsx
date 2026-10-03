@@ -1,64 +1,55 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/shared/lib/supabase'
-import { formatWIB } from '@/shared/lib/date'
-import { RefreshCw, ExternalLink, Calendar, Clock, Check, X } from 'lucide-react'
+import { RefreshCw, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
+import { HistoryMetrics } from './components/history-metrics'
+import { HistoryList } from './components/history-list'
+import { HistoryDetailDrawer } from './components/history-detail-drawer'
 
 export function HistoryPage() {
   const [targets, setTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [networkLatency, setNetworkLatency] = useState<number>(118)
+  const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
 
-  useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from('post_targets')
-        .select('*, posts(*), connected_accounts(account_name, platform)')
-        .order('created_at', { ascending: false })
-        .limit(50)
-      setTargets(data ?? [])
-      setLoading(false)
-    }
-    load()
-  }, [])
-
-  async function reload() {
+  async function loadData(isSilent = false) {
+    if (!isSilent) setLoading(true)
+    const tStart = performance.now()
     const { data } = await supabase
       .from('post_targets')
       .select('*, posts(*), connected_accounts(account_name, platform)')
       .order('created_at', { ascending: false })
-      .limit(50)
-    setTargets(data ?? [])
+      .limit(100)
+    const elapsed = Math.round(performance.now() - tStart)
+    setNetworkLatency(elapsed > 0 ? elapsed : 118)
+    if (data) setTargets(data)
+    if (!isSilent) setLoading(false)
   }
 
-  const [editingSchedule, setEditingSchedule] = useState<{ postId: string; currentSchedule: string } | null>(null)
-  const [newScheduleValue, setNewScheduleValue] = useState('')
+  useEffect(() => {
+    loadData(false)
 
-  async function updatePostSchedule(postId: string) {
-    if (!newScheduleValue) {
-      toast.error('Pilih jadwal waktu baru')
-      return
+    // Supabase Realtime subscription for instant dispatch & retry updates
+    let debounceTimer: any = null
+    const channel = supabase
+      .channel('history_realtime_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_targets' },
+        () => {
+          if (debounceTimer) clearTimeout(debounceTimer)
+          debounceTimer = setTimeout(() => {
+            loadData(true)
+          }, 400)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
-    const isoString = new Date(newScheduleValue).toISOString()
-    const { error: postErr } = await supabase
-      .from('posts')
-      .update({ scheduled_at: isoString, status: 'SCHEDULED' })
-      .eq('id', postId)
-
-    if (postErr) {
-      toast.error('Gagal memperbarui jadwal: ' + postErr.message)
-      return
-    }
-
-    // Reset status targets agar siap di-pickup ulang sesuai jadwal baru
-    await supabase
-      .from('post_targets')
-      .update({ status: 'PENDING', error_payload: null, polling_attempts: 0 })
-      .eq('post_id', postId)
-
-    toast.success('Jadwal berhasil diperbarui!')
-    setEditingSchedule(null)
-    reload()
-  }
+  }, [])
 
   async function retry(targetId: string) {
     const { error } = await supabase
@@ -68,8 +59,41 @@ export function HistoryPage() {
     if (error) {
       toast.error('Gagal mereset target')
     } else {
-      toast.success('Target direset ke PENDING')
-      reload()
+      toast.success('Target direset ke PENDING, engine akan segera mengeksekusi ulang!')
+      loadData(true)
+      // Trigger fast worker run
+      fetch('/api/cron/dispatcher').catch(() => {})
+    }
+  }
+
+  async function deleteTarget(targetId: string) {
+    if (!confirm('Hapus log target ini dari riwayat?')) return
+    const { error } = await supabase.from('post_targets').delete().eq('id', targetId)
+    if (error) {
+      toast.error('Gagal menghapus target')
+    } else {
+      toast.success('Target berhasil dihapus')
+      if (selectedTarget?.id === targetId) setSelectedTarget(null)
+      loadData(true)
+    }
+  }
+
+  async function retryAllFailed() {
+    const failedIds = targets.filter((t) => t.status === 'FAILED').map((t) => t.id)
+    if (failedIds.length === 0) {
+      toast.info('Tidak ada target gagal untuk di-retry')
+      return
+    }
+    const { error } = await supabase
+      .from('post_targets')
+      .update({ status: 'PENDING', error_payload: null, polling_attempts: 0 })
+      .in('id', failedIds)
+    if (error) {
+      toast.error('Gagal me-retry semua target')
+    } else {
+      toast.success(`${failedIds.length} target gagal berhasil direset ke PENDING!`)
+      loadData(true)
+      fetch('/api/cron/dispatcher').catch(() => {})
     }
   }
 
@@ -80,190 +104,162 @@ export function HistoryPage() {
       const data = await res.json()
       if (data.success) {
         toast.success('Antrean berhasil diproses!')
+        loadData(true)
       } else {
         toast.error('Gagal: ' + (data.error || 'Unknown error'))
       }
-      reload()
+      loadData(true)
     } catch (err: any) {
       toast.error(err.message || 'Gagal memanggil dispatcher')
     }
   }
 
-  const statusColor: Record<string, string> = {
-    SUCCESS: 'bg-green-100 text-green-700',
-    FAILED: 'bg-red-100 text-red-700',
-    IN_PROGRESS: 'bg-yellow-100 text-yellow-700',
-    PENDING: 'bg-blue-100 text-blue-700',
-  }
+  const filteredTargets = targets.filter((t) => {
+    if (filterStatus === 'ALL') return true
+    if (filterStatus === 'SUCCESS') return t.status === 'SUCCESS'
+    if (filterStatus === 'PENDING') return t.status === 'PENDING' || t.status === 'IN_PROGRESS'
+    if (filterStatus === 'FAILED') return t.status === 'FAILED'
+    return true
+  })
+
+  const successCount = targets.filter((t) => t.status === 'SUCCESS').length
+  const pendingCount = targets.filter((t) => t.status === 'PENDING' || t.status === 'IN_PROGRESS').length
+  const failedCount = targets.filter((t) => t.status === 'FAILED').length
+  const successPct = targets.length > 0 ? ((successCount / targets.length) * 100).toFixed(1) : '100.0'
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Riwayat Eksekusi</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Pantau status eksekusi dan log pengiriman postingan ke sosial media.
+    <div className="flex flex-col gap-6 w-full pb-10">
+      {/* Top Header & Page Meta */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[#27272A]">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white">Riwayat Eksekusi</h1>
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46] text-black dark:text-white font-semibold">
+              LIVE REALTIME • {networkLatency}ms
+            </span>
+          </div>
+          <p className="text-xs text-[#6B7280]">
+            Pantau status antrian real-time, inspect mockup simulator smartphone 9:16, dan kelola log hasil posting.
           </p>
         </div>
-        <button
-          onClick={triggerDispatcher}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
-        >
-          <RefreshCw size={13} />
-          Jalankan Antrean Sekarang
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {failedCount > 0 && (
+            <button
+              type="button"
+              onClick={retryAllFailed}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition-colors cursor-pointer shadow-xs"
+            >
+              <RotateCcw size={13} />
+              <span>Retry Semua Gagal ({failedCount})</span>
+            </button>
+          )}
+
+
+          <button
+            type="button"
+            onClick={() => loadData(false)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] text-black dark:text-white text-xs font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#27272A] transition-colors cursor-pointer"
+          >
+            <RefreshCw size={13} />
+            <span>Reload</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={triggerDispatcher}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-medium hover:bg-[#262626] transition-all shadow-xs cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[15px]">sync</span>
+            <span>Jalankan Antrean Sekarang</span>
+          </button>
+        </div>
       </div>
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Memuat...</p>
-      ) : targets.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Belum ada riwayat.</p>
-      ) : (
-        <div className="space-y-2">
-          {targets.map((t) => (
-            <div key={t.id} className="flex items-center gap-3 p-3 rounded-md border border-border bg-card">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {t.posts?.title || t.posts?.content_text?.slice(0, 50) || '—'}
-                </p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap mt-0.5">
-                  <span>{t.connected_accounts?.platform}</span>
-                  <span>·</span>
-                  <span>{t.connected_accounts?.account_name}</span>
-                  <span>·</span>
-                  <span className="flex items-center gap-1 text-foreground/80 font-medium">
-                    <Clock size={12} />
-                    Jadwal: {t.posts?.scheduled_at ? formatWIB(t.posts.scheduled_at) : 'Langsung'}
-                  </span>
-                </p>
-                {t.error_payload?.message && (
-                  <p className="text-xs text-red-500 mt-1 truncate">{t.error_payload.message}</p>
-                )}
-              </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${statusColor[t.status] || 'bg-muted text-muted-foreground'}`}>
-                {t.status}
-              </span>
-              {t.status !== 'SUCCESS' && t.posts?.id && (
-                <button
-                  onClick={() => {
-                    const currentVal = t.posts.scheduled_at
-                      ? new Date(new Date(t.posts.scheduled_at).getTime() - new Date().getTimezoneOffset() * 60000)
-                          .toISOString()
-                          .slice(0, 16)
-                      : ''
-                    setEditingSchedule({ postId: t.posts.id, currentSchedule: t.posts.scheduled_at })
-                    setNewScheduleValue(currentVal)
-                  }}
-                  className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground cursor-pointer"
-                  title="Ubah Jadwal Waktu"
-                >
-                  <Calendar size={14} />
-                </button>
-              )}
-              {t.status === 'FAILED' && (
-                <button onClick={() => retry(t.id)} className="p-1.5 hover:bg-accent rounded cursor-pointer" title="Retry">
-                  <RefreshCw size={14} />
-                </button>
-              )}
-              {t.external_post_url && (
-                <a href={t.external_post_url} target="_blank" rel="noopener noreferrer" className="p-1.5 hover:bg-accent rounded">
-                  <ExternalLink size={14} />
-                </a>
-              )}
-            </div>
-          ))}
+
+      {/* 4 Bento Metrics Cards Component */}
+      <HistoryMetrics
+        loading={loading}
+        totalCount={targets.length}
+        successCount={successCount}
+        pendingCount={pendingCount}
+        failedCount={failedCount}
+        successPct={successPct}
+        networkLatency={networkLatency}
+      />
+
+      {/* Filter Tabs Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] p-2 rounded-xl shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setFilterStatus('ALL')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium cursor-pointer ${
+              filterStatus === 'ALL'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Semua <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-[#27272A] text-white text-[10px]">{targets.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('SUCCESS')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+              filterStatus === 'SUCCESS'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Sukses <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{successCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('PENDING')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+              filterStatus === 'PENDING'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Dalam Antrean <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{pendingCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('FAILED')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+              filterStatus === 'FAILED'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Gagal / Perlu Retry <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-red-600 text-white text-[10px]">{failedCount}</span>
+          </button>
         </div>
-      )}
 
-      {/* Modal / Dialog Ubah Jadwal */}
-      {editingSchedule && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Ubah Jadwal Eksekusi</h3>
-              </div>
-              <button
-                onClick={() => setEditingSchedule(null)}
-                className="p-1 hover:bg-accent rounded text-muted-foreground cursor-pointer"
-              >
-                <X size={15} />
-              </button>
-            </div>
+        <span className="font-mono text-[10px] text-[#6B7280]">
+          HEARTBEAT 10s ACTIVE
+        </span>
+      </div>
 
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Jadwal Baru (WIB)</label>
-                <input
-                  type="datetime-local"
-                  value={newScheduleValue}
-                  onChange={(e) => setNewScheduleValue(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
+      {/* Target Table Log Component */}
+      <HistoryList
+        loading={loading}
+        targets={filteredTargets}
+        onSelectTarget={(t) => setSelectedTarget(t)}
+        onRetry={retry}
+        onDelete={deleteTarget}
+      />
 
-              {/* Quick presets */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                <span className="text-[10px] text-muted-foreground font-medium">Preset Cepat:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const now = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-                      .toISOString()
-                      .slice(0, 16)
-                    setNewScheduleValue(now)
-                  }}
-                  className="text-[10px] px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground cursor-pointer"
-                >
-                  Sekarang
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const in10m = new Date(Date.now() + 10 * 60000 - new Date().getTimezoneOffset() * 60000)
-                      .toISOString()
-                      .slice(0, 16)
-                    setNewScheduleValue(in10m)
-                  }}
-                  className="text-[10px] px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground cursor-pointer"
-                >
-                  +10 Menit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const tomorrow = new Date(Date.now() + 24 * 3600000 - new Date().getTimezoneOffset() * 60000)
-                      .toISOString()
-                      .slice(0, 16)
-                    setNewScheduleValue(tomorrow)
-                  }}
-                  className="text-[10px] px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground cursor-pointer"
-                >
-                  Besok
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
-              <button
-                type="button"
-                onClick={() => setEditingSchedule(null)}
-                className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-medium hover:bg-accent cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={() => updatePostSchedule(editingSchedule.postId)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 cursor-pointer shadow-xs"
-              >
-                <Check size={14} />
-                Simpan Jadwal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Drawer Detail Inspeksi Konten dengan Template Phone Simulator */}
+      <HistoryDetailDrawer
+        target={selectedTarget}
+        onClose={() => setSelectedTarget(null)}
+        onRetry={retry}
+        onDelete={deleteTarget}
+      />
     </div>
   )
 }

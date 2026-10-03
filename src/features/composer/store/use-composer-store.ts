@@ -19,6 +19,7 @@ interface ComposerState {
   scheduledAt: string // ISO
   isUploading: boolean
   uploadProgress: number
+  isSimulationMode: boolean
 
   setTitle: (v: string) => void
   setContentText: (v: string) => void
@@ -26,6 +27,7 @@ interface ComposerState {
   toggleTarget: (id: string) => void
   setScheduledAt: (v: string) => void
   setUploading: (v: boolean, pct?: number) => void
+  setSimulationMode: (v: boolean) => void
   reset: () => void
 }
 
@@ -38,6 +40,7 @@ const init = {
   scheduledAt: new Date(Date.now() + 3600_000).toISOString().slice(0, 16),
   isUploading: false,
   uploadProgress: 0,
+  isSimulationMode: true, // Default true untuk mode dev & testing aman
 }
 
 export const useComposerStore = create<ComposerState>((set) => ({
@@ -57,5 +60,12 @@ export const useComposerStore = create<ComposerState>((set) => ({
     })),
   setScheduledAt: (scheduledAt) => set({ scheduledAt }),
   setUploading: (isUploading, uploadProgress = 0) => set({ isUploading, uploadProgress }),
+  setSimulationMode: (isSimulationMode) => set({ isSimulationMode }),
   reset: () => set(init),
 }))
+
+// Expose to window for lightweight Playwright e2e automation (/ponytail)
+if (typeof window !== 'undefined') {
+  ;(window as any).__COMPOSER_STORE__ = useComposerStore
+}
+

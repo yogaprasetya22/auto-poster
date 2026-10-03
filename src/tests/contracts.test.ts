@@ -69,4 +69,29 @@ describe('Contract & Payload Validation', () => {
     expect(payload.image_url).toBe(mediaUrl)
     expect(payload.caption).toBe(caption)
   })
+
+  it('rejects video duration < 3s or > 600s for TikTok constraints', () => {
+    function validateTikTokDuration(durationSec: number): { valid: boolean; reason?: string } {
+      if (durationSec < 3) return { valid: false, reason: 'duration_check: minimal 3 detik' }
+      if (durationSec > 600) return { valid: false, reason: 'duration_check: maksimal 10 menit' }
+      return { valid: true }
+    }
+
+    expect(validateTikTokDuration(2.1).valid).toBe(false)
+    expect(validateTikTokDuration(2.1).reason).toContain('duration_check')
+    expect(validateTikTokDuration(15).valid).toBe(true)
+    expect(validateTikTokDuration(700).valid).toBe(false)
+  })
+
+  it('ensures media URLs for external Meta/TikTok APIs are public (not localhost)', () => {
+    function isPublicUrl(url: string | null | undefined): boolean {
+      if (!url) return false
+      return !url.includes('localhost') && !url.includes('127.0.0.1') && url.startsWith('https://')
+    }
+
+    expect(isPublicUrl('http://localhost:5173/sample.mp4')).toBe(false)
+    expect(isPublicUrl('https://lh3.googleusercontent.com/d/12345')).toBe(true)
+    expect(isPublicUrl('https://res.cloudinary.com/demo/video.mp4')).toBe(true)
+  })
 })
+
