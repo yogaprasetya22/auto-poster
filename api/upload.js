@@ -1,6 +1,11 @@
 import { google } from 'googleapis';
 import formidable from 'formidable';
 import fs from 'fs';
+import dns from 'dns';
+
+if (dns && dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 export const config = { api: { bodyParser: false } };
 

@@ -1,7 +1,15 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { Sparkles, Copy, Check, Upload, ExternalLink, X, Plus, Trash2, Image as ImageIcon, Eye, Code2 } from 'lucide-react'
 import { uploadToGDrive } from '@/shared/lib/gdrive'
 import { toast } from 'sonner'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from '@/shared/components/ui/drawer'
 
 interface ProductImageItem {
   id: string
@@ -107,8 +115,6 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [copiedKeyframe, setCopiedKeyframe] = useState(false)
 
-  if (!isOpen) return null
-
   async function handleUploadMultipleImages(files: FileList | null) {
     if (!files || files.length === 0) return
     setIsUploadingImage(true)
@@ -130,9 +136,9 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
       }
 
       setProductImages((prev) => [...prev, ...newItems])
-      toast.success(`${newItems.length} foto referensi produk berhasil diunggah & siap disesuaikan ke alur video!`)
+      toast.success(`${newItems.length} foto referensi produk berhasil diunggah!`)
     } catch (err: any) {
-      toast.error('Gagal mengunggah beberapa gambar: ' + err.message)
+      toast.error('Gagal mengunggah foto: ' + err.message)
     } finally {
       setIsUploadingImage(false)
     }
@@ -174,39 +180,41 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
-      <div className="relative w-full max-w-4xl max-h-[92vh] bg-white dark:bg-[#18181B] rounded-2xl border border-[#E5E7EB] dark:border-[#27272A] shadow-2xl flex flex-col overflow-hidden">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#E5E7EB] dark:border-[#27272A] bg-[#FAFAFA] dark:bg-[#202023]">
-          <div className="flex items-center gap-2.5">
-            <div className="size-9 rounded-xl bg-black text-white dark:bg-white dark:text-black flex items-center justify-center shadow-xs">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-black dark:text-white">
-                  AI Video Storyboard & Multi-Image Studio
-                </h3>
-                <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold">
-                  Google Flow / Kling / Runway
-                </span>
+    <Drawer open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DrawerContent className="max-w-4xl w-full bg-white dark:bg-[#18181B] rounded-t-2xl md:rounded-t-none md:rounded-l-2xl border-t md:border-t-0 md:border-l border-[#E5E7EB] dark:border-[#27272A] shadow-2xl flex flex-col max-h-[96vh] md:max-h-screen">
+        {/* Drawer Header */}
+        <DrawerHeader className="p-4 sm:p-5 border-b border-[#E5E7EB] dark:border-[#27272A] bg-[#FAFAFA] dark:bg-[#202023]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="size-9 rounded-xl bg-black text-white dark:bg-white dark:text-black flex items-center justify-center shadow-xs">
+                <Sparkles size={18} />
               </div>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-                Upload galeri foto produk fisik asli, tinjau preview gambar, dan sesuaikan alur cerita adegan video promosi.
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <DrawerTitle className="text-sm sm:text-base font-bold text-black dark:text-white">
+                    AI Video Storyboard & Multi-Image Studio
+                  </DrawerTitle>
+                  <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold">
+                    Google Flow / Kling / Runway
+                  </span>
+                </div>
+                <DrawerDescription className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                  Upload galeri foto produk fisik asli, tinjau preview gambar, dan susun alur video iklan.
+                </DrawerDescription>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-[#6B7280] hover:text-black dark:hover:text-white hover:bg-[#E5E7EB] dark:hover:bg-[#27272A] transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-[#6B7280] hover:text-black dark:hover:text-white hover:bg-[#E5E7EB] dark:hover:bg-[#27272A] transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
+        </DrawerHeader>
 
-        {/* Modal Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs">
+        {/* Drawer Body */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs flex-1">
           {/* Section 1: Konfigurasi Produk & Upload Galeri Multi-Image */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 p-4 rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-[#F9FAFB] dark:bg-[#121214]">
             {/* Form Kiri */}
@@ -262,7 +270,6 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                       value={customAngle}
                       onChange={(e) => {
                         setCustomAngle(e.target.value)
-                        // Ponytail: Auto-adjust height sesuai baris konten secara native
                         e.target.style.height = 'auto'
                         e.target.style.height = `${Math.min(220, Math.max(80, e.target.scrollHeight))}px`
                       }}
@@ -397,7 +404,6 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                 {storyboard.scenes.map((scene, idx) => {
                   const isCopied = copiedIndex === idx
-                  // Cari gambar referensi yang cocok dari list gambar jika ada
                   const matchedImg = productImages[idx] || productImages[0]
 
                   return (
@@ -518,8 +524,8 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-3 sm:p-4 border-t border-[#E5E7EB] dark:border-[#27272A] bg-[#FAFAFA] dark:bg-[#202023] flex items-center justify-between text-[11px]">
+        {/* Drawer Footer */}
+        <DrawerFooter className="p-3 sm:p-4 border-t border-[#E5E7EB] dark:border-[#27272A] bg-[#FAFAFA] dark:bg-[#202023] flex flex-row items-center justify-between text-[11px]">
           <span className="text-[#6B7280]">
             💡 Tips: Di Kling AI atau Runway, unggah masing-masing foto referensi di mode <strong>Image-to-Video</strong> untuk menjaga konsistensi bentuk fisik kartu di setiap scene.
           </span>
@@ -530,8 +536,8 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
           >
             Tutup
           </button>
-        </div>
-      </div>
-    </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
