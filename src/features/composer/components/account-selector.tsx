@@ -21,6 +21,7 @@ const platformIcons: Record<string, { label: string; icon: React.ComponentType<{
 export function AccountSelector() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
+  const [cooldownAccountIds, setCooldownAccountIds] = useState<string[]>([])
   const [quotaStats, setQuotaStats] = useState<Record<string, { countToday: number; limit: number; safeLimit: number }>>({})
   const { targetAccountIds, toggleTarget } = useComposerStore()
 

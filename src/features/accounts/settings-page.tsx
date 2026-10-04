@@ -101,12 +101,18 @@ export function SettingsPage() {
   async function loadAccounts() {
     setLoading(true)
     const startTime = performance.now()
-    const [{ data: accs }, { count: pCount }, { data: knowledges }, { data: auditKnowledge }] = await Promise.all([
+    const [{ data: accs }, { count: pCount }, { data: auditKnowledge }] = await Promise.all([
       supabase.from('connected_accounts').select('*').eq('is_active', true),
       supabase.from('posts').select('id', { count: 'exact', head: true }),
-      supabase.from('ai_tuning_knowledge').select('*').eq('is_active', true).order('created_at', { ascending: true }),
       supabase.from('audit_logs').select('response_body').eq('event_type', 'AI_KNOWLEDGE_STORE').order('id', { ascending: false }).limit(1),
     ])
+    // Query ai_tuning_knowledge secara opsional jika tabel tersedia di Supabase
+    let knowledges: any[] | null = null
+    try {
+      const res = await supabase.from('ai_tuning_knowledge').select('*').eq('is_active', true).order('created_at', { ascending: true })
+      if (!res.error && res.data) knowledges = res.data
+    } catch {}
+
     const latency = Math.round(performance.now() - startTime)
     setSystemLatency(latency > 0 ? latency : 18)
     setAccounts(accs ?? [])
