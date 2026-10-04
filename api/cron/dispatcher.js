@@ -16,9 +16,11 @@ export const config = { maxDuration: 10 };
 
 export default async function handler(req, res) {
   const isDev = process.env.NODE_ENV !== 'production';
-  const cronKey = process.env.CRON_SECRET_KEY;
-  const isAuth = req.headers.authorization === `Bearer ${cronKey}` ||
-    new URL(req.url, 'http://localhost').searchParams.get('key') === cronKey;
+  const cronKey = (process.env.CRON_SECRET_KEY || '').trim();
+  const queryKey = (req.query?.key || new URL(req.url, 'http://localhost').searchParams.get('key') || '').trim();
+  const authHeader = (req.headers.authorization || '').replace('Bearer ', '').trim();
+
+  const isAuth = (cronKey && (authHeader === cronKey || queryKey === cronKey));
   if (!isAuth && !isDev) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
