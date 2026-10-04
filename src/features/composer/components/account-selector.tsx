@@ -21,7 +21,7 @@ const platformIcons: Record<string, { label: string; icon: React.ComponentType<{
 export function AccountSelector() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
-  const [cooldownAccountIds, setCooldownAccountIds] = useState<string[]>([])
+  const [quotaStats, setQuotaStats] = useState<Record<string, { countToday: number; limit: number; safeLimit: number }>>({})
   const { targetAccountIds, toggleTarget } = useComposerStore()
 
   useEffect(() => {
@@ -54,22 +54,18 @@ export function AccountSelector() {
         }
       }
 
-      // Default jika ada akun TikTok, pastikan ditandai cooldown 24 jam sementara
-      (accData || []).forEach((a) => {
-        if (a.platform === 'tiktok' && !cooledIds.includes(a.id)) {
-          cooledIds.push(a.id)
-        }
-      })
-
       setCooldownAccountIds(cooledIds)
       setAccounts(accData || [])
 
-      // Otomatis lepaskan centang akun TikTok yang cooldown agar form langsung fokus ke Instagram
-      cooledIds.forEach((cId) => {
-        if (targetAccountIds.includes(cId)) {
-          toggleTarget(cId)
-        }
-      })
+      // Fetch live quota real-time langsung dari API platform (Meta & TikTok)
+      fetch('/api/accounts-quota')
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.success && res.data) {
+            setQuotaStats(res.data)
+          }
+        })
+        .catch(() => {})
 
       setLoading(false)
     }
@@ -123,6 +119,7 @@ export function AccountSelector() {
           const isSelected = targetAccountIds.includes(acc.id)
           const config = platformIcons[acc.platform]
           const IconComponent = config?.icon || InstagramIcon
+          const quota = quotaStats[acc.id]
 
           return (
             <button
@@ -148,13 +145,27 @@ export function AccountSelector() {
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-[11px] font-semibold truncate leading-tight">{acc.account_name}</span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`text-[9px] font-mono uppercase ${isSelected ? 'text-white/70' : 'text-[#6B7280]'}`}>
                       {config?.label || acc.platform}
                     </span>
+                    {quota && (
+                      <span
+                        title="Jumlah postingan hari ini langsung dari API platform resmi"
+                        className={`text-[8.5px] font-mono px-1 py-0.2 rounded font-bold ${
+                          isSelected
+                            ? 'bg-white/20 text-white'
+                            : quota.countToday >= quota.safeLimit
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {quota.countToday}/{quota.limit} Hari Ini
+                      </span>
+                    )}
                     {isCooldown && (
                       <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-300 font-bold">
-                        COOLDOWN 24J
+                        COOLDOWN
                       </span>
                     )}
                   </div>

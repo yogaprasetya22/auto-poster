@@ -154,6 +154,16 @@ export default defineConfig({
             return
           }
 
+          if (req.url?.startsWith('/api/accounts-quota')) {
+            try {
+              const m: any = await import('./api/accounts-quota.js' as any)
+              await m.default(req, customRes)
+            } catch (err: any) {
+              customRes.status(500).json({ success: false, error: err.message })
+            }
+            return
+          }
+
           if (req.url?.startsWith('/api/cron/dispatcher')) {
             try {
               const m: any = await import('./api/cron/dispatcher.js' as any)
