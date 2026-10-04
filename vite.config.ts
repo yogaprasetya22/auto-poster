@@ -2,6 +2,12 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import dns from 'dns'
+
+// Prioritaskan IPv4 untuk mencegah timeout koneksi Google APIs / Meta Graph API
+if (dns && dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first')
+}
 
 // Muat variabel .env lokal ke process.env Node server
 const env = loadEnv('development', process.cwd(), '')

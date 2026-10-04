@@ -1,5 +1,10 @@
 import { google } from 'googleapis';
+import dns from 'dns';
 import fs from 'fs';
+
+if (dns && dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const folderCache = new Map();
 

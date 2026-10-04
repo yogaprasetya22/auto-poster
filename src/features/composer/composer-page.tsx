@@ -127,6 +127,8 @@ export function ComposerPage() {
 
       toast.success('Postingan berhasil dijadwalkan!')
       reset()
+      // Panggil fast-trigger dispatcher segera agar video langsung terkirim tanpa jeda interval
+      fetch('/api/cron/dispatcher').catch(() => {})
     } catch (err: any) {
       console.error('Error scheduling post:', err)
       toast.error(err.message || 'Gagal menjadwalkan postingan')

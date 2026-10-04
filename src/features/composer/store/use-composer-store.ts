@@ -40,7 +40,7 @@ const init = {
   scheduledAt: new Date(Date.now() + 3600_000).toISOString().slice(0, 16),
   isUploading: false,
   uploadProgress: 0,
-  isSimulationMode: true, // Default true untuk mode dev & testing aman
+  isSimulationMode: false, // Default false agar postingan langsung terbit live ke platform
 }
 
 export const useComposerStore = create<ComposerState>((set) => ({
