@@ -154,6 +154,25 @@ export default defineConfig({
             return
           }
 
+          if (req.url?.startsWith('/api/ai/video-prompt') && req.method === 'POST') {
+            try {
+              let bodyStr = ''
+              req.on('data', (chunk: any) => { bodyStr += chunk })
+              req.on('end', async () => {
+                try {
+                  ;(req as any).body = bodyStr ? JSON.parse(bodyStr) : {}
+                } catch {
+                  ;(req as any).body = {}
+                }
+                const m: any = await import('./api/ai/video-prompt.js' as any)
+                await m.default(req, customRes)
+              })
+            } catch (err: any) {
+              customRes.status(500).json({ success: false, error: err.message })
+            }
+            return
+          }
+
           if (req.url?.startsWith('/api/accounts-quota')) {
             try {
               const m: any = await import('./api/accounts-quota.js' as any)

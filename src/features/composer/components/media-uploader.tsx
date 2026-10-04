@@ -1,13 +1,15 @@
-import { useCallback } from 'react'
-import { Upload, X, Film, Image as ImageIcon } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Upload, X, Film, Image as ImageIcon, Sparkles } from 'lucide-react'
 import { useComposerStore } from '../store/use-composer-store'
 import { uploadToGDrive, getVideoDuration } from '@/shared/lib/gdrive'
 import { toast } from 'sonner'
+import { VideoPromptModal } from './video-prompt-modal'
 
 const MAX_SIZE = 100 * 1024 * 1024 // 100 MB
 
 export function MediaUploader() {
   const { media, isUploading, setMedia, setUploading } = useComposerStore()
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false)
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -79,8 +81,23 @@ export function MediaUploader() {
           <span className="material-symbols-outlined text-[15px]">perm_media</span>
           <span>Upload Asset Media (Video / Gambar Asli)</span>
         </label>
-        <span className="font-mono text-[10px] text-[#6B7280]">MANUAL UPLOAD</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPromptModalOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black dark:bg-white text-white dark:text-black font-semibold text-[10.5px] hover:opacity-90 transition-all cursor-pointer shadow-2xs"
+          >
+            <Sparkles size={12} />
+            <span>AI Video Prompt & Storyboard</span>
+          </button>
+          <span className="font-mono text-[10px] text-[#6B7280]">MANUAL UPLOAD</span>
+        </div>
       </div>
+
+      <VideoPromptModal
+        isOpen={isPromptModalOpen}
+        onClose={() => setIsPromptModalOpen(false)}
+      />
 
       <label
         onDrop={onDrop}
