@@ -17,8 +17,10 @@ export const config = { maxDuration: 10 };
 export default async function handler(req, res) {
   const isDev = process.env.NODE_ENV !== 'production';
   const cronKey = (process.env.CRON_SECRET_KEY || '').trim();
-  const queryKey = (req.query?.key || new URL(req.url, 'http://localhost').searchParams.get('key') || '').trim();
-  const authHeader = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  const urlMatches = req.url ? req.url.match(/[?&]key=([^&#]+)/) : null;
+  const rawKeyFromUrl = urlMatches ? decodeURIComponent(urlMatches[1]).trim() : '';
+  const queryKey = (req.query?.key || rawKeyFromUrl).trim();
+  const authHeader = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
 
   const isAuth = (cronKey && (authHeader === cronKey || queryKey === cronKey));
   if (!isAuth && !isDev) {

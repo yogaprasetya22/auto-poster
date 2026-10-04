@@ -5,7 +5,7 @@
   ],
   "rewrites": [
     { "source": "/tiktoknHtwOvb6UIzVzqtJ0jcpQUhunhpHwOLA.txt", "destination": "/tiktoknHtwOvb6UIzVzqtJ0jcpQUhunhpHwOLA.txt" },
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api/:match*", "destination": "/api/:match*" },
     { "source": "/((?!tiktok.*|api/|.*\\\\.[\\\\w]+$).*)", "destination": "/index.html" }
   ]
 }
