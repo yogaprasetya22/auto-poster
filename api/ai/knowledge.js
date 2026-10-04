@@ -1,7 +1,7 @@
 /**
  * AI TUNING & KNOWLEDGE ENGINE
  * Prinsip: Ponytail (Lean, Zero Hardcode, 100% Database-Driven, In-Memory Cached)
- * Seluruh data pengetahuan diambil murni dari tabel Supabase `ai_tuning_knowledge`.
+ * Mengambil data memori pengetahuan produk & brand langsung dari Supabase.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -43,37 +43,11 @@ export async function getDynamicKnowledgeContext(additionalInstructions = "") {
             : cachedKnowledgeString;
     }
 
-    // 2. Fetch 100% dari tabel database Supabase: ai_tuning_knowledge
+    // 2. Fetch dari database Supabase: audit_logs (AI_KNOWLEDGE_STORE) atau ai_tuning_knowledge
     const supabase = getSupabaseClient();
     if (supabase) {
         try {
-            const { data, error } = await supabase
-                .from("ai_tuning_knowledge")
-                .select("category, title, content")
-                .eq("is_active", true)
-                .order("created_at", { ascending: true });
-
-            if (!error && data && data.length > 0) {
-                const entries = data
-                    .map(
-                        (item) =>
-                            `- [${item.category.toUpperCase()}] ${item.title}: ${item.content}`,
-                    )
-                    .join("\n");
-
-                cachedKnowledgeString = `
-Konteks Pengetahuan Resmi (Tersinkronisasi 100% dari Database Cloud):
-${entries}
-- Aturan Mutlak: JANGAN MENGARANG ATAU HALUSINASI. Selalu gunakan fakta dan angka resmi di atas atau yang tertera pada produk.
-`.trim();
-                lastCacheTime = now;
-
-                return additionalInstructions
-                    ? `${cachedKnowledgeString}\nCatatan Tambahan: ${additionalInstructions}`.trim()
-                    : cachedKnowledgeString;
-            }
-
-            // Fallback: Baca dari storage audit_logs jika ai_tuning_knowledge belum dibuat
+            // Cek storage audit_logs
             const { data: auditData } = await supabase
                 .from("audit_logs")
                 .select("response_body")
@@ -101,20 +75,44 @@ ${entries}
                     ? `${cachedKnowledgeString}\nCatatan Tambahan: ${additionalInstructions}`.trim()
                     : cachedKnowledgeString;
             }
+
+            // Alternatif tabel ai_tuning_knowledge jika ada
+            const { data, error } = await supabase
+                .from("ai_tuning_knowledge")
+                .select("category, title, content")
+                .eq("is_active", true)
+                .order("created_at", { ascending: true });
+
+            if (!error && data && data.length > 0) {
+                const entries = data
+                    .map(
+                        (item) =>
+                            `- [${item.category.toUpperCase()}] ${item.title}: ${item.content}`,
+                    )
+                    .join("\n");
+
+                cachedKnowledgeString = `
+Konteks Pengetahuan Resmi (Tersinkronisasi 100% dari Database Cloud):
+${entries}
+- Aturan Mutlak: JANGAN MENGARANG ATAU HALUSINASI. Selalu gunakan fakta dan angka resmi di atas atau yang tertera pada produk.
+`.trim();
+                lastCacheTime = now;
+
+                return additionalInstructions
+                    ? `${cachedKnowledgeString}\nCatatan Tambahan: ${additionalInstructions}`.trim()
+                    : cachedKnowledgeString;
+            }
         } catch (err) {
-            console.warn(
-                "Gagal membaca tabel ai_tuning_knowledge:",
-                err.message,
-            );
+            console.warn("Gagal membaca knowledge database:", err.message);
         }
     }
 
-    // 3. Jika tabel kosong sama sekali, kembalikan instruksi dasar universal (bukan hardcoded brand)
+    // 3. Fallback jika database belum ada data
     const defaultBase = `
-                            Konteks Pengetahuan:
-                            - Mode: Brand Promotion & Content Scheduling
-                            - Aturan Mutlak: JANGAN MENGARANG ATAU HALUSINASI. Baca teks, harga, dan fitur asli secara presisi dari materi yang diberikan.
-                            `.trim();
+Konteks Pengetahuan:
+- Mode: Brand Promotion & Content Scheduling
+- Aturan Mutlak: JANGAN MENGARANG ATAU HALUSINASI. Baca teks, harga, dan fitur asli secara presisi dari materi yang diberikan.
+`.trim();
 
     return additionalInstructions
         ? `${defaultBase}\nCatatan Tambahan: ${additionalInstructions}`.trim()
