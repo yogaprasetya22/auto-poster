@@ -26,7 +26,7 @@ export function HistoryPage() {
     const { data } = await supabase
       .from('post_targets')
       .select('*, posts(*), connected_accounts(account_name, platform)')
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .limit(100)
     const elapsed = Math.round(performance.now() - tStart)
     setNetworkLatency(elapsed > 0 ? elapsed : 118)

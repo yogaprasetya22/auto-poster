@@ -450,6 +450,7 @@ export function SettingsPage() {
       .subscribe()
 
     const success = searchParams.get('success')
+    const connectedParam = searchParams.get('connected')
     const count = searchParams.get('count')
     const error = searchParams.get('error')
 
@@ -457,8 +458,12 @@ export function SettingsPage() {
       toast.success(`Berhasil! ${count || 'Beberapa'} akun Meta terhubung secara otomatis.`)
       setSearchParams({})
       loadAccounts()
+    } else if (connectedParam === 'tiktok') {
+      toast.success('Berhasil! Akun TikTok terhubung dan refresh token tersimpan.')
+      setSearchParams({})
+      loadAccounts()
     } else if (error) {
-      toast.error('Gagal menghubungkan Meta: ' + decodeURIComponent(error))
+      toast.error('Gagal menghubungkan akun: ' + decodeURIComponent(error))
       setSearchParams({})
     }
 
@@ -648,7 +653,27 @@ export function SettingsPage() {
 
                   <div className="flex items-center gap-2 self-end lg:self-center shrink-0">
                     {isConnected ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {platform.key === 'tiktok' && (
+                          <button
+                            type="button"
+                            onClick={() => { window.location.href = '/api/auth/tiktok-login' }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-medium hover:bg-[#262626] transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">sync</span>
+                            <span>Reconnect TikTok (1-Click OAuth)</span>
+                          </button>
+                        )}
+                        {platform.key === 'instagram' && (
+                          <button
+                            type="button"
+                            onClick={handleMetaConnect}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-medium hover:bg-[#262626] transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">sync</span>
+                            <span>Reconnect Meta</span>
+                          </button>
+                        )}
                         {connected.map((c) => (
                           <button
                             key={c.id}
@@ -661,14 +686,27 @@ export function SettingsPage() {
                         ))}
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => setActivePlatformModal(platform.key)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-medium hover:bg-[#262626] transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">link</span>
-                        <span>Hubungkan Akun</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {platform.key === 'tiktok' ? (
+                          <button
+                            type="button"
+                            onClick={() => { window.location.href = '/api/auth/tiktok-login' }}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-black text-white text-xs font-semibold hover:bg-[#262626] transition-colors cursor-pointer shadow-xs"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">bolt</span>
+                            <span>Hubungkan TikTok (1-Click OAuth)</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setActivePlatformModal(platform.key)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-medium hover:bg-[#262626] transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">link</span>
+                            <span>Hubungkan Akun</span>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

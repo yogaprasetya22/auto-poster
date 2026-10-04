@@ -88,17 +88,27 @@ export default async function handler(req, res) {
       console.warn('Gagal fetch TikTok user info:', uErr);
     }
 
-    // Encrypt token
+    // Encrypt access token & refresh token
     let encryptedToken = accessToken;
+    let encryptedRefreshToken = refreshToken || null;
     try {
       const { data: encData, error: encErr } = await supabase.rpc('encrypt_secret', {
         plain_text: accessToken,
         secret_key: encryptionKey,
       });
       if (!encErr && encData) encryptedToken = encData;
+
+      if (refreshToken) {
+        const { data: encRefData, error: encRefErr } = await supabase.rpc('encrypt_secret', {
+          plain_text: refreshToken,
+          secret_key: encryptionKey,
+        });
+        if (!encRefErr && encRefData) encryptedRefreshToken = encRefData;
+      }
     } catch {}
-    // Set token expiration to 1 year (365 days)
-    const expiresAt = new Date(Date.now() + 365 * 24 * 3600_000).toISOString();
+
+    // Expiration date token access (default 24 jam)
+    const expiresAt = new Date(Date.now() + (expiresIn * 1000)).toISOString();
 
     // 3. Upsert into Supabase connected_accounts
     const { error: upsertErr } = await supabase
@@ -110,6 +120,7 @@ export default async function handler(req, res) {
           account_name: `@${username} (${displayName})`,
           account_avatar_url: avatarUrl || null,
           access_token_encrypted: encryptedToken,
+          refresh_token_encrypted: encryptedRefreshToken,
           token_expires_at: expiresAt,
           is_active: true,
           updated_at: new Date().toISOString(),

@@ -9,10 +9,10 @@
 
 | # | Bug | Platform | Severity | Status | Root Cause |
 |---|-----|----------|----------|--------|------------|
-| 1 | [Transcoding Timeout False-Positive](#1-transcoding-timeout-false-positive) | Instagram | 🔴 Critical | **OPEN** | `executed_at` di-overwrite saat FAILED, timestamp awal hilang |
+| 1 | [Transcoding Timeout False-Positive](#1-transcoding-timeout-false-positive) | Instagram | 🔴 Critical | **FIXED** | `executed_at` tidak di-overwrite, query status Meta lengkap + logging container |
 | 2 | [Google Drive URL Tidak Dapat Diunduh Meta](#2-google-drive-url-tidak-dapat-diunduh-meta) | Instagram | 🔴 Critical | **OPEN** | Google Drive sharing permission / redirect chain |
-| 3 | [TikTok `spam_risk_too_many_posts`](#3-tiktok-spam_risk_too_many_posts) | TikTok | 🟡 Medium | **OPEN** | Platform-side rate limit, bukan bug kode |
-| 4 | [Parent Post Status Tidak Sinkron](#4-parent-post-status-tidak-sinkron) | All | 🟡 Medium | **PARTIALLY FIXED** | Race condition antara Phase 1 dan Phase 2 |
+| 3 | [TikTok `spam_risk_too_many_posts`](#3-tiktok-spam_risk_too_many_posts) | TikTok | 🟡 Medium | **FIXED** | Ditangkap di init & poll catch, diubah ke PENDING + cooldown retry otomatis |
+| 4 | [Parent Post Status Tidak Sinkron](#4-parent-post-status-tidak-sinkron) | All | 🟡 Medium | **FIXED** | Sinkronisasi `syncParentStatus()` dipanggil di seluruh cabang state transition |
 | 5 | [Vercel 10s Timeout vs Polling](#5-vercel-10s-timeout-vs-polling) | All | 🟠 Architectural | **BY DESIGN** | Hobby tier limit, mitigasi via multi-tick |
 | 6 | [TikTok Token Expired Tanpa Refresh](#6-tiktok-token-expired-tanpa-refresh) | TikTok | 🟢 Fixed | **FIXED** | `getValidToken()` sudah di-add |
 

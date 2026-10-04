@@ -29,6 +29,9 @@ export default async function handler(req, res) {
 
   const start = Date.now();
   try {
+    // Failsafe GC: sapu video usang (>1 jam) di bucket transit
+    sweepOrphanedTransitVideos();
+
     // Phase 1: Poll active targets (max 2, hemat time budget 10s)
     const { data: active } = await supabase
       .from('post_targets')
@@ -55,13 +58,18 @@ export default async function handler(req, res) {
       .limit(2);
 
     if (pendingTargets && pendingTargets.length > 0) {
+      const touchedPostIds = new Set();
       for (const t of pendingTargets) {
         if (Date.now() - start > 8000) break; // hard guard
         if (t.posts) {
+          touchedPostIds.add(t.posts.id);
           await supabase.from('posts').update({ status: 'PROCESSING' }).eq('id', t.posts.id);
           await initTarget(t.posts, t);
           await sleep(500); // ponytail: 2s terlalu boros, 500ms cukup
         }
+      }
+      for (const pId of touchedPostIds) {
+        await syncParentStatus(pId);
       }
     } else {
       const { data: due } = await supabase
@@ -94,11 +102,19 @@ export default async function handler(req, res) {
   }
 }
 
-async function initTarget(post, target) {
-  const token = await getValidToken(target.connected_accounts);
-  let mediaUrl = post.gdrive_lh3_url || post.gdrive_stream_url;
+function logTag(target, level = 'info', msg = '', extra = '') {
+  const prefix = `[TARGET:${target.id}][${(target.platform || '').toUpperCase()}]`;
+  const text = `${prefix} ${msg} ${extra}`.trim();
+  if (level === 'error') console.error(text);
+  else if (level === 'warn') console.warn(text);
+  else console.log(text);
+}
 
-  // Jika URL media berupa relative path lokal atau memiliki file tersimpan di disk lokal
+// ==========================================
+// 1. RESOLVER & INITIALIZER
+// ==========================================
+
+function resolveLocalMedia(post, mediaUrl) {
   let localFilePath = null;
   if (mediaUrl && mediaUrl.startsWith('/')) {
     localFilePath = path.join(process.cwd(), 'public', mediaUrl.replace(/^\//, ''));
@@ -106,37 +122,239 @@ async function initTarget(post, target) {
       localFilePath = path.join(process.cwd(), mediaUrl.replace(/^\//, ''));
     }
   }
-
-  // Cek apakah ada file lokal di generated-promo yang cocok
   if (!localFilePath || !fs.existsSync(localFilePath)) {
     const promoDir = path.join(process.cwd(), 'public', 'generated-promo');
     if (fs.existsSync(promoDir)) {
       const files = fs.readdirSync(promoDir);
-      // Cocokkan berdasarkan nama file dari url jika ada
       const match = files.find((f) => mediaUrl?.includes(f) || (post.title && f.endsWith('.mp4')));
-      if (match) {
-        localFilePath = path.join(promoDir, match);
-      }
+      if (match) localFilePath = path.join(promoDir, match);
     }
   }
+  return localFilePath;
+}
 
-  // 0. MODE DEVELOPMENT / DRY-RUN SIMULASI
-  // Jika postingan di-flag sebagai simulasi atau env DISPATCHER_DRY_RUN=true,
-  // maka jadwal, upload GDrive, dan riwayat dieksekusi 100% tanpa menembak endpoint live OpenAPI
-  const isSimulation = Boolean(
-    post.media_metadata?.is_simulation ||
-    process.env.DISPATCHER_DRY_RUN === 'true'
-  );
+const TRANSIT_BUCKET = 'temp-reels';
 
+async function uploadToTransitStorage(mediaUrl, postTitle = 'video') {
+  try {
+    const res = await fetch(mediaUrl);
+    if (!res.ok) return null;
+    const arrayBuf = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuf);
+    const fileName = `transit-${Date.now()}-${postTitle.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '_')}.mp4`;
+
+    const { error } = await supabase.storage
+      .from(TRANSIT_BUCKET)
+      .upload(fileName, buffer, { contentType: 'video/mp4', upsert: true });
+
+    if (error) {
+      console.warn('[TRANSIT STORAGE] Upload failed:', error.message);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from(TRANSIT_BUCKET).getPublicUrl(fileName);
+    return { publicUrl, storagePath: fileName };
+  } catch (err) {
+    console.warn('[TRANSIT STORAGE] Fallback to direct URL:', err.message);
+    return null;
+  }
+}
+
+async function deleteTransitStorage(storagePath) {
+  if (!storagePath) return;
+  try {
+    await supabase.storage.from(TRANSIT_BUCKET).remove([storagePath]);
+    console.log(`[TRANSIT STORAGE CLEANED] Removed: ${storagePath}`);
+  } catch {}
+}
+
+async function sweepOrphanedTransitVideos() {
+  try {
+    const { data: files } = await supabase.storage.from(TRANSIT_BUCKET).list('', { limit: 50 });
+    if (!files?.length) return;
+    const oneHourAgo = Date.now() - 3600000;
+    const toDelete = files
+      .filter((f) => f.created_at && new Date(f.created_at).getTime() < oneHourAgo)
+      .map((f) => f.name);
+    if (toDelete.length > 0) {
+      await supabase.storage.from(TRANSIT_BUCKET).remove(toDelete);
+      console.log(`[TRANSIT SWEEPER GC] Removed ${toDelete.length} expired videos.`);
+    }
+  } catch {}
+}
+
+async function initInstagram(post, target, token, mediaUrl) {
+  const isIgUserToken = token.startsWith('IGAA');
+  const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
+  const bodyPayload = { caption: post.content_text, access_token: token };
+  let transitPath = null;
+
+  if (post.media_type === 'VIDEO') {
+    bodyPayload.media_type = 'REELS';
+    let rawVideoUrl = mediaUrl;
+    if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+      rawVideoUrl = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download&confirm=t`;
+    }
+
+    // ponytail: Pola Zero-Footprint Transit. Upload ke Supabase Storage temp-reels untuk CDN Meta yang super cepat
+    const transit = await uploadToTransitStorage(rawVideoUrl, post.title || 'reel');
+    if (transit?.publicUrl) {
+      bodyPayload.video_url = transit.publicUrl;
+      transitPath = transit.storagePath;
+      logTag(target, 'info', `Using Supabase Transit URL: ${transit.publicUrl}`);
+    } else {
+      bodyPayload.video_url = rawVideoUrl;
+    }
+    bodyPayload.share_to_feed = true;
+  } else {
+    bodyPayload.image_url = mediaUrl;
+  }
+
+  logTag(target, 'info', `Creating media container on ${apiHost}...`);
+  const r = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bodyPayload),
+  });
+  const d = await r.json();
+  if (!d.id) {
+    if (transitPath) await deleteTransitStorage(transitPath);
+    throw new Error(JSON.stringify(d.error || d));
+  }
+
+  logTag(target, 'info', `Container created: ${d.id}`);
+  await supabase.from('post_targets').update({
+    status: 'IN_PROGRESS',
+    async_container_id: d.id,
+    executed_at: new Date().toISOString(),
+    last_polled_at: new Date().toISOString(),
+    // ponytail: Simpan transit storage path di error_payload sementara untuk tracking cleanup
+    error_payload: transitPath ? { transit_storage_path: transitPath } : null,
+  }).eq('id', target.id);
+}
+
+async function initTikTok(post, target, token, mediaUrl, localFilePath) {
+  let videoBuffer;
+  if (localFilePath && fs.existsSync(localFilePath)) {
+    videoBuffer = fs.readFileSync(localFilePath);
+  } else {
+    let downloadUrl = mediaUrl;
+    if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+      downloadUrl = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download&confirm=t`;
+    } else if (mediaUrl && !mediaUrl.startsWith('http')) {
+      downloadUrl = `http://localhost:5173${mediaUrl}`;
+    }
+    if (!downloadUrl) throw new Error('Video untuk TikTok tidak ditemukan');
+    let videoRes;
+    try {
+      videoRes = await fetch(downloadUrl);
+    } catch (netErr) {
+      throw new Error(`gagal_download_video: ${netErr.message || 'koneksi terputus'}`);
+    }
+    if (!videoRes.ok) throw new Error(`gagal_unduh_media_http_${videoRes.status}`);
+    videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+  }
+
+  const videoSize = videoBuffer.length;
+  logTag(target, 'info', `Requesting TikTok upload init (${videoSize} bytes)...`);
+  let initR;
+  try {
+    initR = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        post_info: { title: post.content_text.slice(0, 150), privacy_level: 'SELF_ONLY' },
+        source_info: { source: 'FILE_UPLOAD', video_size: videoSize, chunk_size: videoSize, total_chunk_count: 1 },
+      }),
+    });
+  } catch (netErr) {
+    throw new Error(`tiktok_init_network_error: ${netErr.message || 'koneksi terputus'}`);
+  }
+  const initData = await initR.json();
+  if (!initData.data?.publish_id || !initData.data?.upload_url) {
+    const apiErr = initData.error?.code || initData.error?.message || JSON.stringify(initData.error || initData);
+    throw new Error(apiErr);
+  }
+
+  logTag(target, 'info', `Streaming video buffer to TikTok Gateway...`);
+  let uploadR;
+  try {
+    uploadR = await fetch(initData.data.upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'video/mp4', 'Content-Range': `bytes 0-${videoSize - 1}/${videoSize}` },
+      body: videoBuffer,
+    });
+  } catch (netErr) {
+    throw new Error(`tiktok_gateway_upload_error: ${netErr.message || 'koneksi terputus'}`);
+  }
+  if (!uploadR.ok && uploadR.status !== 201) {
+    throw new Error(`tiktok_upload_gateway_http_${uploadR.status}`);
+  }
+
+  logTag(target, 'info', `Uploaded! Publish ID: ${initData.data.publish_id}`);
+  await supabase.from('post_targets').update({
+    status: 'IN_PROGRESS',
+    async_container_id: initData.data.publish_id,
+    executed_at: new Date().toISOString(),
+    last_polled_at: new Date().toISOString(),
+  }).eq('id', target.id);
+}
+
+async function initFacebook(post, target, token, mediaUrl) {
+  const pageId = target.connected_accounts.platform_user_id;
+  let postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/feed`;
+  let postBody = { message: post.content_text, access_token: token };
+
+  if (post.media_type === 'VIDEO') {
+    postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/videos`;
+    let videoFileUrl = mediaUrl;
+    if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+      videoFileUrl = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download&confirm=t`;
+    }
+    postBody = { description: post.content_text, file_url: videoFileUrl, access_token: token };
+  } else if (post.media_type === 'IMAGE' && mediaUrl) {
+    postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/photos`;
+    let imgUrl = mediaUrl;
+    if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
+      imgUrl = post.gdrive_lh3_url || `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download`;
+    }
+    postBody = { caption: post.content_text, url: imgUrl, access_token: token };
+  }
+
+  logTag(target, 'info', `Posting direct to Facebook Page ${pageId}...`);
+  const r = await fetch(postEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(postBody),
+  });
+  const d = await r.json();
+  if (!d.id) throw new Error(JSON.stringify(d.error || d));
+
+  logTag(target, 'info', `Facebook post SUCCESS id: ${d.id}`);
+  await supabase.from('post_targets').update({
+    status: 'SUCCESS',
+    error_payload: null,
+    external_post_id: d.id,
+    external_post_url: `https://www.facebook.com/${d.id}`,
+    executed_at: new Date().toISOString(),
+  }).eq('id', target.id);
+}
+
+async function initTarget(post, target) {
+  const token = await getValidToken(target.connected_accounts);
+  const mediaUrl = post.gdrive_lh3_url || post.gdrive_stream_url;
+  const localFilePath = resolveLocalMedia(post, mediaUrl);
+
+  const isSimulation = Boolean(post.media_metadata?.is_simulation || process.env.DISPATCHER_DRY_RUN === 'true');
   if (isSimulation) {
-    console.log(`[SIMULATION MODE] Target ${target.platform} di-simulate SUCCESS tanpa kirim ke platform nyata.`);
+    logTag(target, 'info', `Simulating SUCCESS (Dry-Run Mode)`);
     await supabase.from('post_targets').update({
       status: 'SUCCESS',
       remote_post_id: `sim-${Date.now()}-${target.platform}`,
       executed_at: new Date().toISOString(),
       error_payload: {
         mode: 'SIMULATION_DEV_MODE',
-        message: 'Mode simulasi pengujian aktif: File tersimpan di Google Drive & jadwal teruji tanpa menembak live API platform.',
+        message: 'Mode simulasi pengujian aktif: File tersimpan & jadwal teruji.',
         gdrive_file_id: post.gdrive_file_id,
         gdrive_stream_url: post.gdrive_stream_url,
       },
@@ -146,284 +364,185 @@ async function initTarget(post, target) {
 
   try {
     if (target.platform === 'instagram') {
-      const isIgUserToken = token.startsWith('IGAA');
-      const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
-      const bodyPayload = {
-        caption: post.content_text,
-        access_token: token,
-      };
-
-      if (post.media_type === 'VIDEO') {
-        bodyPayload.media_type = 'REELS';
-        // Meta crawler tidak selalu mengikuti HTTP 303 redirect dari drive.google.com/uc.
-        // Direct link drive.usercontent.google.com langsung mengembalikan HTTP 200 dengan header Content-Type: video/mp4!
-        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
-          bodyPayload.video_url = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download&confirm=t`;
-        } else {
-          bodyPayload.video_url = mediaUrl;
-        }
-        bodyPayload.share_to_feed = true;
-      } else {
-        // Untuk single image, API Instagram Graph hanya menerima image_url (tidak boleh ada media_type: IMAGE)
-        bodyPayload.image_url = mediaUrl;
-      }
-
-      const r = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyPayload),
-      });
-      const d = await r.json();
-      if (!d.id) throw new Error(JSON.stringify(d.error || d));
-      await supabase.from('post_targets').update({
-        status: 'IN_PROGRESS', async_container_id: d.id,
-        executed_at: new Date().toISOString(),
-        last_polled_at: new Date().toISOString(),
-      }).eq('id', target.id);
+      await initInstagram(post, target, token, mediaUrl);
     } else if (target.platform === 'tiktok') {
-      // TikTok Open API: Ambil buffer video dari local path, direct Google Drive, atau streaming URL
-      let videoBuffer;
-      if (localFilePath && fs.existsSync(localFilePath)) {
-        videoBuffer = fs.readFileSync(localFilePath);
-      } else {
-        let downloadUrl = mediaUrl;
-        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
-          downloadUrl = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download&confirm=t`;
-        } else if (mediaUrl && !mediaUrl.startsWith('http')) {
-          downloadUrl = `http://localhost:5173${mediaUrl}`;
-        }
-
-        if (!downloadUrl) throw new Error('Video untuk TikTok tidak ditemukan');
-        const videoRes = await fetch(downloadUrl);
-        if (!videoRes.ok) throw new Error(`Gagal mengunduh video untuk TikTok (${videoRes.status})`);
-        videoBuffer = Buffer.from(await videoRes.arrayBuffer());
-      }
-      const videoSize = videoBuffer.length;
-
-      const initR = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          post_info: {
-            title: post.content_text.slice(0, 150),
-            privacy_level: 'SELF_ONLY', // Mendukung akun Sandbox / Private
-          },
-          source_info: {
-            source: 'FILE_UPLOAD',
-            video_size: videoSize,
-            chunk_size: videoSize,
-            total_chunk_count: 1,
-          },
-        }),
-      });
-      const initData = await initR.json();
-      if (!initData.data?.publish_id || !initData.data?.upload_url) {
-        const errBody = initData.error || initData;
-        const errStr = JSON.stringify(errBody);
-        // ponytail: spam_risk bukan error permanen — retry nanti
-        if (errStr.includes('spam_risk') || errStr.includes('rate_limit')) {
-          await supabase.from('post_targets').update({
-            status: 'PENDING',
-            error_payload: { message: `TikTok rate limited, retry otomatis: ${errStr}`, retry_after: new Date(Date.now() + 3600000).toISOString() },
-            last_polled_at: new Date().toISOString(),
-          }).eq('id', target.id);
-          return;
-        }
-        throw new Error(errStr);
-      }
-
-      // Upload file byte stream ke TikTok Upload Gateway
-      const uploadR = await fetch(initData.data.upload_url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'video/mp4',
-          'Content-Range': `bytes 0-${videoSize - 1}/${videoSize}`,
-        },
-        body: videoBuffer,
-      });
-
-      if (!uploadR.ok && uploadR.status !== 201) {
-        throw new Error(`Gagal mengunggah video stream ke TikTok Gateway (${uploadR.status})`);
-      }
-
-      await supabase.from('post_targets').update({
-        status: 'IN_PROGRESS',
-        async_container_id: initData.data.publish_id,
-        executed_at: new Date().toISOString(),
-        last_polled_at: new Date().toISOString(),
-      }).eq('id', target.id);
+      await initTikTok(post, target, token, mediaUrl, localFilePath);
     } else if (target.platform === 'facebook_page') {
-      const pageId = target.connected_accounts.platform_user_id;
-      let postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/feed`;
-      let postBody = { message: post.content_text, access_token: token };
-
-      if (post.media_type === 'VIDEO') {
-        postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/videos`;
-        // Gunakan direct download URL Google Drive yang mengembalikan HTTP 200 stream MP4
-        let videoFileUrl = mediaUrl;
-        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
-          videoFileUrl = `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download&confirm=t`;
-        }
-        postBody = {
-          description: post.content_text,
-          file_url: videoFileUrl,
-          access_token: token,
-        };
-      } else if (post.media_type === 'IMAGE' && mediaUrl) {
-        postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/photos`;
-        let imgUrl = mediaUrl;
-        if (post.gdrive_file_id && !post.gdrive_file_id.startsWith('local-')) {
-          imgUrl = post.gdrive_lh3_url || `https://drive.usercontent.google.com/download?id=${post.gdrive_file_id}&export=download`;
-        }
-        postBody = { caption: post.content_text, url: imgUrl, access_token: token };
-      }
-
-      const r = await fetch(postEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(postBody),
-      });
-      const d = await r.json();
-      if (!d.id) throw new Error(JSON.stringify(d.error || d));
-
-      await supabase.from('post_targets').update({
-        status: 'SUCCESS',
-        error_payload: null,
-        external_post_id: d.id,
-        external_post_url: `https://www.facebook.com/${d.id}`,
-        executed_at: new Date().toISOString(),
-      }).eq('id', target.id);
+      await initFacebook(post, target, token, mediaUrl);
     }
   } catch (err) {
+    const errMsg = err?.message || String(err);
+    logTag(target, 'error', `INIT FAILED: ${errMsg}`);
+
+    // ponytail: TikTok spam_risk/rate_limit saat init jangan langsung di-mark FAILED permanen
+    if (target.platform === 'tiktok' && (errMsg.includes('spam_risk') || errMsg.includes('rate_limit'))) {
+      logTag(target, 'warn', `TikTok spam_risk / rate limit terdeteksi -> ditunda 1 jam.`);
+      await supabase.from('post_targets').update({
+        status: 'PENDING',
+        error_payload: { message: `TikTok rate limited (spam_risk): ${errMsg}`, retry_after: new Date(Date.now() + 3600000).toISOString() },
+        last_polled_at: new Date().toISOString(),
+      }).eq('id', target.id);
+      return;
+    }
+
+    // ponytail: JANGAN overwrite executed_at jika sudah ada
     await supabase.from('post_targets').update({
-      status: 'FAILED', error_payload: { message: err.message }, executed_at: new Date().toISOString(),
+      status: 'FAILED',
+      error_payload: { message: errMsg, step: 'initTarget', failed_at: new Date().toISOString() },
+      ...(target.executed_at ? {} : { executed_at: new Date().toISOString() }),
     }).eq('id', target.id);
   }
 }
 
-async function pollTarget(target) {
-  // Cek apakah target baru saja dicek dalam interval backoff (minimal 15 detik) untuk menghemat rate limit & CPU
-  if (target.last_polled_at) {
-    const elapsedSinceLastPoll = Date.now() - new Date(target.last_polled_at).getTime();
-    if (elapsedSinceLastPoll < 15000) {
-      return; // Tunggu siklus heartbeat berikutnya
+// ==========================================
+// 2. POLLING MONITORS
+// ==========================================
+
+async function pollInstagram(target, token) {
+  const isIgUserToken = token.startsWith('IGAA');
+  const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
+  const r = await fetch(`${apiHost}/${target.async_container_id}?fields=status_code,status,error_message&access_token=${token}`);
+  const d = await r.json();
+
+  const transitPath = target.error_payload?.transit_storage_path;
+
+  if (d.status_code === 'FINISHED') {
+    logTag(target, 'info', `Transcoding FINISHED! Publishing container ${target.async_container_id}...`);
+    const pub = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ creation_id: target.async_container_id, access_token: token }),
+    });
+    const pd = await pub.json();
+    if (!pd.id) throw new Error(JSON.stringify(pd.error || pd));
+
+    logTag(target, 'info', `Publish SUCCESS id: ${pd.id}`);
+    await supabase.from('post_targets').update({
+      status: 'SUCCESS', error_payload: null, external_post_id: pd.id, executed_at: new Date().toISOString(),
+    }).eq('id', target.id);
+
+    // ponytail: Zero-footprint cleanup langsung saat publish berhasil
+    if (transitPath) await deleteTransitStorage(transitPath);
+  } else if (d.status_code === 'ERROR') {
+    const errMsg = d.error_message || d.status || 'Meta transcoding failed';
+    if (transitPath) await deleteTransitStorage(transitPath);
+
+    if (errMsg.includes('not accessible') || errMsg.includes('download')) {
+      logTag(target, 'warn', `URL download issue on Meta, retry: ${errMsg}`);
+      await supabase.from('post_targets').update({
+        status: 'PENDING',
+        error_payload: { message: `URL retry: ${errMsg}`, retry_count: (target.polling_attempts || 0) + 1 },
+        last_polled_at: new Date().toISOString(),
+      }).eq('id', target.id);
+      return;
     }
-  }
+    throw new Error(errMsg);
+  } else {
+    const initiatedTime = target.executed_at || target.last_polled_at || new Date().toISOString();
+    const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
+    logTag(target, 'info', `Still IN_PROGRESS (${d.status_code || d.status || 'PROCESSING'}). Elapsed: ${minutesElapsed.toFixed(1)}m`);
 
-  const token = await getValidToken(target.connected_accounts);
-
-  try {
-    if (target.platform === 'instagram') {
-      const isIgUserToken = token.startsWith('IGAA');
-      const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
-      const r = await fetch(`${apiHost}/${target.async_container_id}?fields=status_code,status,error_message&access_token=${token}`);
-      const d = await r.json();
-
-      if (d.status_code === 'FINISHED') {
+    if (minutesElapsed > 30) {
+      logTag(target, 'warn', `Container ${target.async_container_id} elapsed ${minutesElapsed.toFixed(1)}m > 30m. Checking final status...`);
+      const recheck = await fetch(`${apiHost}/${target.async_container_id}?fields=status_code,status,error_message&access_token=${token}`);
+      const rc = await recheck.json();
+      if (rc.status_code === 'FINISHED') {
         const pub = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media_publish`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ creation_id: target.async_container_id, access_token: token }),
         });
         const pd = await pub.json();
-        if (!pd.id) throw new Error(JSON.stringify(pd.error || pd));
-        await supabase.from('post_targets').update({
-          status: 'SUCCESS', error_payload: null, external_post_id: pd.id, executed_at: new Date().toISOString(),
-        }).eq('id', target.id);
-      } else if (d.status_code === 'ERROR') {
-        const errMsg = d.error_message || d.status || 'Meta transcoding failed';
-        // Jika error karena URL tidak accessible, retry dengan lh3 URL jika tersedia
-        if (errMsg.includes('not accessible') || errMsg.includes('download')) {
+        if (pd.id) {
+          logTag(target, 'info', `Final check published SUCCESS id: ${pd.id}`);
           await supabase.from('post_targets').update({
-            status: 'PENDING',
-            error_payload: { message: `URL retry: ${errMsg}`, retry_count: (target.polling_attempts || 0) + 1 },
-            last_polled_at: new Date().toISOString(),
+            status: 'SUCCESS', error_payload: null, external_post_id: pd.id, executed_at: new Date().toISOString(),
           }).eq('id', target.id);
+          if (transitPath) await deleteTransitStorage(transitPath);
           return;
         }
-        throw new Error(errMsg);
-      } else {
-        // Hitung durasi nyata sejak container dibuat (executed_at di-set saat initTarget)
-        const initiatedTime = target.executed_at || target.last_polled_at || new Date().toISOString();
-        const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
-        
-        // Timeout: 30 menit (video besar butuh waktu lama di Meta)
-        if (minutesElapsed > 30) {
-          // Final-check: cek sekali lagi sebelum mark FAILED
-          const recheck = await fetch(`${apiHost}/${target.async_container_id}?fields=status_code&access_token=${token}`);
-          const rc = await recheck.json();
-          if (rc.status_code === 'FINISHED') {
-            const pub = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media_publish`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ creation_id: target.async_container_id, access_token: token }),
-            });
-            const pd = await pub.json();
-            if (pd.id) {
-              await supabase.from('post_targets').update({
-                status: 'SUCCESS', error_payload: null, external_post_id: pd.id, executed_at: new Date().toISOString(),
-              }).eq('id', target.id);
-              return;
-            }
-          }
-          throw new Error('Meta transcoding timeout (>30 menit waktu nyata)');
-        }
-
-        await supabase.from('post_targets').update({
-          polling_attempts: (target.polling_attempts || 0) + 1,
-          last_polled_at: new Date().toISOString(),
-        }).eq('id', target.id);
       }
+      if (transitPath) await deleteTransitStorage(transitPath);
+      throw new Error(`Meta transcoding timeout (${minutesElapsed.toFixed(0)}m elapsed, container: ${target.async_container_id}, last_status: ${rc.status_code || rc.status || 'UNKNOWN'})`);
+    }
+
+    await supabase.from('post_targets').update({
+      polling_attempts: (target.polling_attempts || 0) + 1,
+      last_polled_at: new Date().toISOString(),
+    }).eq('id', target.id);
+  }
+}
+
+async function pollTikTok(target, token) {
+  const r = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ publish_id: target.async_container_id }),
+  });
+  const d = await r.json();
+
+  if (d.error?.code === 'rate_limit_exceeded') {
+    logTag(target, 'warn', `Temporary rate limit exceeded on status fetch, waiting for next heartbeat...`);
+    await supabase.from('post_targets').update({
+      last_polled_at: new Date().toISOString(),
+    }).eq('id', target.id);
+    return;
+  }
+
+  const st = d.data?.status;
+  if (st === 'PUBLISH_COMPLETE') {
+    const extId = d.data.publicaly_available_post_id?.[0] || target.async_container_id;
+    logTag(target, 'info', `Publish COMPLETE id: ${extId}`);
+    await supabase.from('post_targets').update({
+      status: 'SUCCESS', error_payload: null, external_post_id: extId, executed_at: new Date().toISOString(),
+    }).eq('id', target.id);
+  } else if (st === 'FAILED') {
+    const reason = d.data?.fail_reason || 'TikTok publish failed';
+    if (reason.includes('spam_risk') || reason.includes('rate_limit')) {
+      logTag(target, 'warn', `TikTok rate limit / spam risk -> auto retry 1h: ${reason}`);
+      await supabase.from('post_targets').update({
+        status: 'PENDING',
+        error_payload: { message: `TikTok rate limited, retry otomatis: ${reason}`, retry_after: new Date(Date.now() + 3600000).toISOString() },
+        last_polled_at: new Date().toISOString(),
+      }).eq('id', target.id);
+      return;
+    }
+    throw new Error(reason);
+  } else {
+    const initiatedTime = target.executed_at || target.last_polled_at || new Date().toISOString();
+    const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
+    logTag(target, 'info', `Still PROCESSING status: ${st || 'FETCHING'}. Elapsed: ${minutesElapsed.toFixed(1)}m`);
+
+    if (minutesElapsed > 30) {
+      throw new Error(`TikTok transcoding timeout (${minutesElapsed.toFixed(0)}m elapsed, publish_id: ${target.async_container_id})`);
+    }
+    await supabase.from('post_targets').update({
+      polling_attempts: (target.polling_attempts || 0) + 1,
+      last_polled_at: new Date().toISOString(),
+    }).eq('id', target.id);
+  }
+}
+
+async function pollTarget(target) {
+  if (target.last_polled_at) {
+    const elapsedSinceLastPoll = Date.now() - new Date(target.last_polled_at).getTime();
+    if (elapsedSinceLastPoll < 15000) return;
+  }
+
+  const token = await getValidToken(target.connected_accounts);
+  try {
+    if (target.platform === 'instagram') {
+      await pollInstagram(target, token);
     } else if (target.platform === 'tiktok') {
-      const r = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publish_id: target.async_container_id }),
-      });
-      const d = await r.json();
-
-      // Jika terkena temporary rate limit, jangan gagalkan target — beri jeda sampai tick cron berikutnya
-      if (d.error?.code === 'rate_limit_exceeded') {
-        console.warn('[TIKTOK RATE LIMIT] Temporary rate limit exceeded, waiting for next heartbeat...');
-        await supabase.from('post_targets').update({
-          last_polled_at: new Date().toISOString(),
-        }).eq('id', target.id);
-        return;
-      }
-
-      const st = d.data?.status;
-      if (st === 'PUBLISH_COMPLETE') {
-        await supabase.from('post_targets').update({
-          status: 'SUCCESS', error_payload: null, external_post_id: d.data.publicaly_available_post_id?.[0] || target.async_container_id, executed_at: new Date().toISOString(),
-        }).eq('id', target.id);
-      } else if (st === 'FAILED') {
-        const reason = d.data?.fail_reason || 'TikTok publish failed';
-        // ponytail: spam_risk = retry, bukan permanent fail
-        if (reason.includes('spam_risk') || reason.includes('rate_limit')) {
-          await supabase.from('post_targets').update({
-            status: 'PENDING',
-            error_payload: { message: `TikTok rate limited, retry otomatis: ${reason}`, retry_after: new Date(Date.now() + 3600000).toISOString() },
-            last_polled_at: new Date().toISOString(),
-          }).eq('id', target.id);
-          return;
-        }
-        throw new Error(reason);
-      } else {
-        const initiatedTime = target.executed_at || target.last_polled_at || new Date().toISOString();
-        const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
-        if (minutesElapsed > 30) {
-          throw new Error('TikTok transcoding timeout (>30 menit waktu nyata)');
-        }
-        await supabase.from('post_targets').update({
-          polling_attempts: (target.polling_attempts || 0) + 1,
-          last_polled_at: new Date().toISOString(),
-        }).eq('id', target.id);
-      }
+      await pollTikTok(target, token);
     }
   } catch (err) {
-    // ponytail: JANGAN overwrite executed_at — itu timestamp creation, bukan error
+    const errMsg = err?.message || String(err);
+    logTag(target, 'error', `POLL FAIL: ${errMsg}`);
+
     await supabase.from('post_targets').update({
-      status: 'FAILED', error_payload: { message: err.message, failed_at: new Date().toISOString() },
+      status: 'FAILED',
+      error_payload: { message: errMsg, step: 'pollTarget', container_id: target.async_container_id, failed_at: new Date().toISOString() },
     }).eq('id', target.id);
   }
 

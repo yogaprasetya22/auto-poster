@@ -101,9 +101,12 @@ export function HistoryDetailDrawer({
                   <span className="font-bold uppercase tracking-wide">Status: {target.status}</span>
                   {target.error_payload ? (
                     <span className="font-mono text-[11px] break-all">
-                      {typeof target.error_payload === 'string'
-                        ? target.error_payload
-                        : (target.error_payload?.message || JSON.stringify(target.error_payload))}
+                      {(() => {
+                        const raw = typeof target.error_payload === 'string'
+                          ? target.error_payload
+                          : (target.error_payload?.message || JSON.stringify(target.error_payload))
+                        return raw.replace(/^(Err:\s*|Error:\s*)/i, '')
+                      })()}
                     </span>
                   ) : (
                     <span>Postingan dijadwalkan untuk akun @{accountName}</span>

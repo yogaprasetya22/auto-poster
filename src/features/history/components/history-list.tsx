@@ -61,7 +61,12 @@ export function HistoryList({
                       {t.status === 'FAILED' && t.error_payload && (
                         <span className="text-red-600 truncate max-w-md font-mono text-[10px] flex items-center gap-1">
                           <AlertCircle size={10} />
-                          Err: {typeof t.error_payload === 'string' ? t.error_payload : (t.error_payload?.message || JSON.stringify(t.error_payload))}
+                          {(() => {
+                            const raw = typeof t.error_payload === 'string'
+                              ? t.error_payload
+                              : (t.error_payload?.message || JSON.stringify(t.error_payload))
+                            return raw.replace(/^(Err:\s*|Error:\s*)/i, '')
+                          })()}
                         </span>
                       )}
                     </div>

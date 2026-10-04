@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Upload, X, Film, Image as ImageIcon, Sparkles } from 'lucide-react'
+import { Upload, X, Film, Image as ImageIcon, Sparkles, Loader2 } from 'lucide-react'
 import { useComposerStore } from '../store/use-composer-store'
 import { uploadToGDrive, getVideoDuration } from '@/shared/lib/gdrive'
 import { toast } from 'sonner'
@@ -8,7 +8,7 @@ import { VideoPromptModal } from './video-prompt-modal'
 const MAX_SIZE = 100 * 1024 * 1024 // 100 MB
 
 export function MediaUploader() {
-  const { media, isUploading, setMedia, setUploading } = useComposerStore()
+  const { media, isUploading, uploadProgress, setMedia, setUploading } = useComposerStore()
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false)
 
   const handleFile = useCallback(
@@ -18,18 +18,21 @@ export function MediaUploader() {
         return
       }
       setUploading(true, 0)
+      const toastId = toast.loading(`Mengunggah "${file.name}" ke Google Drive...`)
       try {
-        const result = await uploadToGDrive(file)
+        const result = await uploadToGDrive(file, (pct) => {
+          setUploading(true, pct)
+        })
         let duration: number | undefined
         if (file.type.startsWith('video/')) {
           duration = await getVideoDuration(file)
         }
         setMedia({ ...result, durationSeconds: duration })
-        toast.success('Media berhasil diunggah ke Google Drive!')
+        toast.success('Media berhasil diunggah ke Google Drive!', { id: toastId })
       } catch (err: any) {
-        toast.error(err.message || 'Gagal mengunggah media')
+        toast.error(err.message || 'Gagal mengunggah media', { id: toastId })
       } finally {
-        setUploading(false)
+        setUploading(false, 0)
       }
     },
     [setMedia, setUploading]
@@ -37,6 +40,7 @@ export function MediaUploader() {
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault()
+    if (isUploading) return
     const file = e.dataTransfer.files[0]
     if (file) handleFile(file)
   }
@@ -102,22 +106,53 @@ export function MediaUploader() {
       <label
         onDrop={onDrop}
         onDragOver={(e) => e.preventDefault()}
-        className="flex flex-col items-center justify-center gap-2.5 p-8 rounded-xl border border-dashed border-[#D1D5DB] hover:border-black bg-[#FAFAFA] hover:bg-white cursor-pointer transition-all shadow-xs"
+        className={`relative overflow-hidden flex flex-col items-center justify-center gap-2.5 p-8 rounded-xl border border-dashed transition-all shadow-xs ${
+          isUploading
+            ? 'border-black/40 bg-zinc-50 dark:bg-zinc-900/50 cursor-wait pointer-events-none'
+            : 'border-[#D1D5DB] hover:border-black bg-[#FAFAFA] hover:bg-white cursor-pointer'
+        }`}
       >
-        <div className="size-10 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-black shadow-xs">
-          <Upload size={18} />
+        <div className="size-11 rounded-full bg-white dark:bg-zinc-800 border border-[#E5E7EB] dark:border-zinc-700 flex items-center justify-center text-black dark:text-white shadow-xs">
+          {isUploading ? (
+            <Loader2 size={20} className="animate-spin text-black dark:text-white" />
+          ) : (
+            <Upload size={18} />
+          )}
         </div>
-        <div className="flex flex-col items-center text-center gap-1">
-          <span className="text-xs font-semibold text-black">
-            {isUploading ? 'Sedang mengunggah media ke Google Drive...' : 'Klik untuk memilih atau seret file media asli ke sini'}
+
+        <div className="flex flex-col items-center text-center gap-1.5 w-full max-w-sm">
+          <span className="text-xs font-semibold text-black dark:text-white">
+            {isUploading
+              ? `Mengunggah media ke Google Drive... ${uploadProgress > 0 ? `(${uploadProgress}%)` : ''}`
+              : 'Klik untuk memilih atau seret file media asli ke sini'}
           </span>
-          <span className="font-mono text-[10px] text-[#6B7280]">
-            Format didukung: MP4, MOV, JPG, PNG (Maksimal 100 MB)
-          </span>
-          <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded mt-1">
-            ✓ Otomatis tersimpan ke folder Google Drive & terintegrasi ke Reels/TikTok
-          </span>
+
+          {isUploading ? (
+            <div className="w-full flex flex-col items-center gap-1.5 mt-1">
+              <div className="w-full bg-zinc-200 dark:bg-zinc-700 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-black dark:bg-white h-full transition-all duration-300 rounded-full"
+                  style={{ width: `${Math.max(uploadProgress, 8)}%` }}
+                />
+              </div>
+              <span className="font-mono text-[10px] text-[#6B7280]">
+                {uploadProgress < 100
+                  ? `Mengirim stream file... ${uploadProgress}%`
+                  : 'Memproses izin & sinkronisasi Google Drive...'}
+              </span>
+            </div>
+          ) : (
+            <>
+              <span className="font-mono text-[10px] text-[#6B7280]">
+                Format didukung: MP4, MOV, JPG, PNG (Maksimal 100 MB)
+              </span>
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded mt-1">
+                ✓ Otomatis tersimpan ke folder Google Drive & terintegrasi ke Reels/TikTok
+              </span>
+            </>
+          )}
         </div>
+
         <input
           type="file"
           accept="video/mp4,video/quicktime,image/jpeg,image/png"

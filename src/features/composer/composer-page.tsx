@@ -63,33 +63,6 @@ export function ComposerPage() {
         return
       }
 
-      // Pemeriksaan Batasan Kuota Harian (Maksimal 5 postingan/hari per akun untuk mencegah spam risk TikTok/Meta)
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      const { data: recentTargets, error: limitErr } = await supabase
-        .from('post_targets')
-        .select('account_id, platform, status')
-        .in('account_id', targetAccountIds)
-        .in('status', ['SUCCESS', 'IN_PROGRESS'])
-        .gte('created_at', oneDayAgo)
-
-      if (!limitErr && recentTargets) {
-        const countsByAccount: Record<string, number> = {}
-        for (const t of recentTargets) {
-          countsByAccount[t.account_id] = (countsByAccount[t.account_id] || 0) + 1
-        }
-
-        const DAILY_LIMIT = 5
-        for (const acc of accounts || []) {
-          const currentCount = countsByAccount[acc.id] || 0
-          if (currentCount >= DAILY_LIMIT) {
-            toast.error(
-              `Akun ${acc.platform.toUpperCase()} telah mencapai batas aman harian (${currentCount}/${DAILY_LIMIT} posting dalam 24 jam). Harap jadwalkan besok untuk menghindari blokir spam.`
-            )
-            return
-          }
-        }
-      }
-
       // 2. Insert main post
       const { data: post, error: postError } = await supabase
         .from('posts')

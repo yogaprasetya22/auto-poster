@@ -52,25 +52,37 @@ export function DashboardPage() {
       supabase.from('posts').select('*')
         .gte('scheduled_at', today.toISOString())
         .lt('scheduled_at', tomorrow.toISOString())
-        .order('scheduled_at', { ascending: true }),
+        .order('scheduled_at', { ascending: true })
+        .limit(5),
       supabase.from('post_targets').select('id, platform, status, created_at, posts(title, content_text)')
         .gte('created_at', timeframeDate.toISOString())
         .order('created_at', { ascending: false }),
       supabase.from('connected_accounts').select('id', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('post_targets').select('id, platform, status, http_status_code, created_at, posts(title, content_text)')
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(6),
       supabase.from('post_targets').select('*, posts(*), connected_accounts(account_name, platform)')
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(100),
     ])
+
+    let activeToday = posts.data ?? []
+    // Jika tidak ada jadwal di hari ini, ambil 5 antrean langsung / postingan terbaru
+    if (activeToday.length === 0) {
+      const { data: recentQueue } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5)
+      activeToday = recentQueue ?? []
+    }
 
     setMetrics({
       scheduled: sched.count ?? 0,
       completed: comp.count ?? 0,
       failed: fail.count ?? 0,
     })
-    setTodayPosts(posts.data ?? [])
+    setTodayPosts(activeToday.slice(0, 5))
     setAllTargets(targets.data ?? [])
     setCalendarTargets(calTargets.data ?? [])
     setConnectedCount(accounts.count ?? 0)
