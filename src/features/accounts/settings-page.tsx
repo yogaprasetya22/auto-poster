@@ -82,6 +82,135 @@ const DEFAULT_KNOWLEDGE_SEED = [
     },
   ]
 
+// ponytail: Helper render markdown presisi tanpa lib berat tambahan
+function parseInlineMarkdown(text: string) {
+  // Parsing: **bold**, *italic*, `code`, link
+  const parts: React.ReactNode[] = []
+  // Regex untuk bold, italic, code
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index))
+    }
+    const token = match[0]
+    if (token.startsWith('**') && token.endsWith('**')) {
+      parts.push(
+        <strong key={match.index} className="font-bold text-black dark:text-white">
+          {token.slice(2, -2)}
+        </strong>
+      )
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      parts.push(
+        <em key={match.index} className="italic text-[#374151] dark:text-[#D1D5DB]">
+          {token.slice(1, -1)}
+        </em>
+      )
+    } else if (token.startsWith('`') && token.endsWith('`')) {
+      parts.push(
+        <code key={match.index} className="px-1 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] font-mono text-[11px] text-[#DC2626] dark:text-[#F87171]">
+          {token.slice(1, -1)}
+        </code>
+      )
+    }
+    lastIndex = regex.lastIndex
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+
+  return parts.length > 0 ? parts : text
+}
+
+function renderCleanMarkdown(content: string) {
+  const lines = content.split('\n')
+  return (
+    <div className="space-y-2 text-[12.5px] leading-relaxed text-[#1F2937] dark:text-[#E5E7EB]">
+      {lines.map((rawLine, idx) => {
+        const line = rawLine.trimEnd()
+        if (!line.trim()) return <div key={idx} className="h-1.5" />
+
+        // Horizontal Rule
+        if (line.trim() === '---' || line.trim() === '***') {
+          return <hr key={idx} className="my-3 border-[#E5E7EB] dark:border-[#27272A]" />
+        }
+
+        // Headings
+        if (line.startsWith('# ')) {
+          return (
+            <h2 key={idx} className="text-[17px] font-black tracking-tight text-black dark:text-white pt-2 pb-1 border-b border-[#E5E7EB] dark:border-[#27272A]">
+              {parseInlineMarkdown(line.replace('# ', ''))}
+            </h2>
+          )
+        }
+        if (line.startsWith('## ')) {
+          return (
+            <h3 key={idx} className="text-[15px] font-bold tracking-tight text-black dark:text-white pt-2 pb-0.5 border-b border-[#E5E7EB]/60 dark:border-[#27272A]/60">
+              {parseInlineMarkdown(line.replace('## ', ''))}
+            </h3>
+          )
+        }
+        if (line.startsWith('### ')) {
+          return (
+            <h4 key={idx} className="text-[13.5px] font-bold text-black dark:text-white pt-1.5">
+              {parseInlineMarkdown(line.replace('### ', ''))}
+            </h4>
+          )
+        }
+
+        // Blockquote
+        if (line.trim().startsWith('> ')) {
+          return (
+            <blockquote key={idx} className="border-l-3 border-black dark:border-white pl-3.5 py-1 text-[#4B5563] dark:text-[#9CA3AF] italic bg-[#F9FAFB] dark:bg-[#18181B] rounded-r my-1">
+              {parseInlineMarkdown(line.trim().replace(/^>\s+/, ''))}
+            </blockquote>
+          )
+        }
+
+        // Numbered List
+        const numMatch = line.match(/^(\d+)\.\s+(.*)/)
+        if (numMatch) {
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-2 my-0.5">
+              <span className="font-mono font-bold text-[11px] text-[#4B5563] dark:text-[#9CA3AF] shrink-0 pt-0.5 min-w-[14px]">
+                {numMatch[1]}.
+              </span>
+              <div className="flex-1 text-[#1F2937] dark:text-[#E5E7EB]">
+                {parseInlineMarkdown(numMatch[2])}
+              </div>
+            </div>
+          )
+        }
+
+        // Unordered List & Nested Bullet
+        if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+          const isNested = line.startsWith('   ') || line.startsWith('\t')
+          return (
+            <div key={idx} className={`flex items-start gap-2 my-0.5 ${isNested ? 'pl-6' : 'pl-2'}`}>
+              <span className="text-black dark:text-white shrink-0 pt-1 leading-none text-[8px]">
+                {isNested ? '◦' : '●'}
+              </span>
+              <div className="flex-1 text-[#1F2937] dark:text-[#E5E7EB]">
+                {parseInlineMarkdown(line.trim().replace(/^[-*]\s+/, ''))}
+              </div>
+            </div>
+          )
+        }
+
+        // Paragraph normal
+        return (
+          <p key={idx} className="leading-relaxed text-[#374151] dark:text-[#D1D5DB]">
+            {parseInlineMarkdown(line)}
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
 export function SettingsPage() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [activePlatformModal, setActivePlatformModal] = useState<PlatformKey | null>(null)
@@ -655,44 +784,11 @@ export function SettingsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="w-full min-h-[210px] rounded-lg border border-input bg-[#F9FAFB] dark:bg-[#18181B] p-4 text-xs leading-relaxed space-y-2 overflow-y-auto max-h-[360px]">
+                <div className="w-full min-h-[320px] rounded-lg border border-[#E5E7EB] dark:border-[#27272A] bg-white dark:bg-[#121214] p-5 text-[12.5px] leading-relaxed overflow-y-auto max-h-[460px] shadow-2xs">
                   {knowledgeForm.content.trim() ? (
-                    knowledgeForm.content.split('\n').map((line, idx) => {
-                      if (!line.trim()) return <div key={idx} className="h-2" />
-                      if (line.startsWith('### ')) {
-                        return <h4 key={idx} className="font-bold text-sm text-foreground pt-1">{line.replace('### ', '')}</h4>
-                      }
-                      if (line.startsWith('## ')) {
-                        return <h3 key={idx} className="font-bold text-base text-foreground pt-1.5 border-b border-border/40 pb-1">{line.replace('## ', '')}</h3>
-                      }
-                      if (line.startsWith('# ')) {
-                        return <h2 key={idx} className="font-bold text-lg text-foreground pt-2 border-b border-border/60 pb-1">{line.replace('# ', '')}</h2>
-                      }
-                      if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-                        return (
-                          <div key={idx} className="flex items-start gap-2 pl-2">
-                            <span className="text-primary font-bold">•</span>
-                            <span className="text-foreground flex-1">
-                              {line.trim().replace(/^[-*]\s+/, '')}
-                            </span>
-                          </div>
-                        )
-                      }
-                      if (line.trim().startsWith('> ')) {
-                        return (
-                          <blockquote key={idx} className="border-l-2 border-primary/60 pl-3 py-0.5 text-muted-foreground italic bg-muted/30 rounded-r">
-                            {line.replace(/^>\s+/, '')}
-                          </blockquote>
-                        )
-                      }
-                      return (
-                        <p key={idx} className="text-foreground">
-                          {line}
-                        </p>
-                      )
-                    })
+                    renderCleanMarkdown(knowledgeForm.content)
                   ) : (
-                    <p className="text-muted-foreground italic text-center py-8">
+                    <p className="text-muted-foreground italic text-center py-12 text-xs">
                       Belum ada teks markdown. Ketik di tab "Tulis" untuk melihat hasil pratinjau di sini.
                     </p>
                   )}
