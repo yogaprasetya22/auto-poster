@@ -1,12 +1,20 @@
 import { useState } from 'react'
-import { Sparkles, Copy, Check, Upload, ExternalLink, Film, ChevronRight, X, AlertCircle } from 'lucide-react'
+import { Sparkles, Copy, Check, Upload, ExternalLink, X, Plus, Trash2, Image as ImageIcon } from 'lucide-react'
 import { uploadToGDrive } from '@/shared/lib/gdrive'
 import { toast } from 'sonner'
+
+interface ProductImageItem {
+  id: string
+  name: string
+  url: string
+  localPreviewUrl: string
+}
 
 interface Scene {
   scene_number: number
   name: string
   duration: string
+  reference_image_used?: string
   storyboard_id: string
   voiceover_id: string
   prompt_english: string
@@ -26,8 +34,7 @@ interface StoryboardData {
 export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [productName, setProductName] = useState('JAGRES Google Review Card')
   const [customAngle, setCustomAngle] = useState('Promo mulai 25 ribu untuk kafe/resto/klinik agar ulasan Google Maps ramai')
-  const [productImageFile, setProductImageFile] = useState<File | null>(null)
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('')
+  const [productImages, setProductImages] = useState<ProductImageItem[]>([])
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [storyboard, setStoryboard] = useState<StoryboardData | null>(null)
@@ -36,20 +43,37 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
 
   if (!isOpen) return null
 
-  async function handleUploadProductImage(file: File) {
+  async function handleUploadMultipleImages(files: FileList | null) {
+    if (!files || files.length === 0) return
     setIsUploadingImage(true)
-    setProductImageFile(file)
+    const newItems: ProductImageItem[] = []
+
     try {
-      const gdriveRes = await uploadToGDrive(file)
-      // Gunakan URL streaming / download publik agar bisa dibaca langsung oleh agent
-      const publicUrl = gdriveRes.streamUrl || `https://drive.usercontent.google.com/download?id=${gdriveRes.fileId}&export=download`
-      setUploadedImageUrl(publicUrl)
-      toast.success('Mentahan foto produk berhasil diunggah & siap dijadikan referensi AI!')
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const localPreviewUrl = URL.createObjectURL(file)
+        const gdriveRes = await uploadToGDrive(file)
+        const publicUrl = gdriveRes.streamUrl || `https://drive.usercontent.google.com/download?id=${gdriveRes.fileId}&export=download`
+
+        newItems.push({
+          id: `img-${Date.now()}-${i}`,
+          name: file.name,
+          url: publicUrl,
+          localPreviewUrl,
+        })
+      }
+
+      setProductImages((prev) => [...prev, ...newItems])
+      toast.success(`${newItems.length} foto referensi produk berhasil diunggah & siap disesuaikan ke alur video!`)
     } catch (err: any) {
-      toast.error('Gagal mengunggah foto produk: ' + err.message)
+      toast.error('Gagal mengunggah beberapa gambar: ' + err.message)
     } finally {
       setIsUploadingImage(false)
     }
+  }
+
+  function handleRemoveImage(id: string) {
+    setProductImages((prev) => prev.filter((img) => img.id !== id))
   }
 
   async function handleGenerateStoryboard() {
@@ -61,7 +85,8 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
         body: JSON.stringify({
           productName,
           customAngle,
-          productImageUrl: uploadedImageUrl,
+          productImages: productImages.map((p) => ({ name: p.name, url: p.url })),
+          productImageUrl: productImages[0]?.url || '',
         }),
       })
       const data = await res.json()
@@ -84,7 +109,7 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-[#18181B] rounded-2xl border border-[#E5E7EB] dark:border-[#27272A] shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative w-full max-w-4xl max-h-[92vh] bg-white dark:bg-[#18181B] rounded-2xl border border-[#E5E7EB] dark:border-[#27272A] shadow-2xl flex flex-col overflow-hidden">
         {/* Modal Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#E5E7EB] dark:border-[#27272A] bg-[#FAFAFA] dark:bg-[#202023]">
           <div className="flex items-center gap-2.5">
@@ -94,21 +119,21 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-bold text-black dark:text-white">
-                  AI Video Storyboard & Agent Prompt Studio
+                  AI Video Storyboard & Multi-Image Studio
                 </h3>
                 <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold">
                   Google Flow / Kling / Runway
                 </span>
               </div>
               <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-                Ekstrak naskah 3-scene iklan dari Knowledge Base produk & generate prompt visual fotorealistis siap pakai.
+                Upload galeri foto produk fisik asli, tinjau preview gambar, dan sesuaikan alur cerita adegan video promosi.
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#6B7280] hover:text-black dark:hover:text-white hover:bg-[#E5E7EB] dark:hover:bg-[#27272A] transition-colors"
+            className="p-1.5 rounded-lg text-[#6B7280] hover:text-black dark:hover:text-white hover:bg-[#E5E7EB] dark:hover:bg-[#27272A] transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -116,9 +141,10 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
 
         {/* Modal Content */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs">
-          {/* Section 1: Konfigurasi Produk & Upload Mentahan */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-[#F9FAFB] dark:bg-[#121214]">
-            <div className="md:col-span-6 space-y-3">
+          {/* Section 1: Konfigurasi Produk & Upload Galeri Multi-Image */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 p-4 rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-[#F9FAFB] dark:bg-[#121214]">
+            {/* Form Kiri */}
+            <div className="md:col-span-5 space-y-3">
               <div>
                 <label className="text-[11px] font-semibold text-black dark:text-white mb-1 block">
                   Nama Produk & Brand
@@ -135,62 +161,25 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                 <label className="text-[11px] font-semibold text-black dark:text-white mb-1 block">
                   Angle Iklan / Brief Tambahan
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={3}
                   value={customAngle}
                   onChange={(e) => setCustomAngle(e.target.value)}
                   placeholder="Contoh: Promo mulai 25 ribu untuk kafe dan resto..."
-                  className="w-full rounded-lg border border-[#D1D5DB] dark:border-[#27272A] bg-white dark:bg-[#18181B] px-3 py-2 text-xs font-medium text-black dark:text-white focus:outline-none focus:ring-1 focus:ring-black"
+                  className="w-full rounded-lg border border-[#D1D5DB] dark:border-[#27272A] bg-white dark:bg-[#18181B] px-3 py-2 text-xs font-medium text-black dark:text-white focus:outline-none focus:ring-1 focus:ring-black leading-relaxed"
                 />
               </div>
-            </div>
-
-            {/* Upload Mentahan Foto Produk Fisik */}
-            <div className="md:col-span-6 flex flex-col justify-between">
-              <div>
-                <label className="text-[11px] font-semibold text-black dark:text-white mb-1 flex items-center justify-between">
-                  <span>Upload Mentahan Gambar Produk (Image Reference)</span>
-                  <span className="font-mono text-[9px] text-[#6B7280]">IMAGE-TO-VIDEO</span>
-                </label>
-                <label className="flex flex-col items-center justify-center p-3.5 rounded-lg border border-dashed border-[#D1D5DB] dark:border-[#3F3F46] bg-white dark:bg-[#18181B] hover:border-black cursor-pointer transition-all">
-                  <Upload size={16} className="text-[#6B7280] mb-1" />
-                  <span className="text-[11px] font-medium text-black dark:text-white text-center">
-                    {isUploadingImage
-                      ? 'Mengunggah mentahan ke cloud...'
-                      : productImageFile
-                      ? productImageFile.name
-                      : 'Pilih foto kartu fisik / kemasan produk (JPG, PNG)'}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    disabled={isUploadingImage}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0]
-                      if (f) handleUploadProductImage(f)
-                    }}
-                  />
-                </label>
-              </div>
-
-              {uploadedImageUrl && (
-                <div className="mt-2 p-2 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[10.5px] text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-                  <span className="truncate max-w-[280px]">✓ Gambar tersimpan: {productImageFile?.name}</span>
-                  <span className="font-mono text-[9px] font-bold">READY</span>
-                </div>
-              )}
 
               <button
                 type="button"
-                disabled={isGenerating}
+                disabled={isGenerating || isUploadingImage}
                 onClick={handleGenerateStoryboard}
-                className="mt-3 w-full py-2.5 px-4 rounded-xl bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
               >
                 {isGenerating ? (
                   <>
                     <div className="size-3.5 border-2 border-white/40 dark:border-black/40 border-t-white dark:border-t-black rounded-full animate-spin" />
-                    <span>AI sedang merancang storyboard & prompt...</span>
+                    <span>AI sedang menyusun cerita & prompt...</span>
                   </>
                 ) : (
                   <>
@@ -200,9 +189,77 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                 )}
               </button>
             </div>
+
+            {/* Galeri Multi-Image & Preview Kanan */}
+            <div className="md:col-span-7 flex flex-col justify-between space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-black dark:text-white flex items-center gap-1.5">
+                  <ImageIcon size={14} />
+                  <span>Galeri Mentahan Foto Produk ({productImages.length} Foto)</span>
+                </label>
+                <span className="font-mono text-[9px] text-[#6B7280]">MULTI IMAGE-TO-VIDEO</span>
+              </div>
+
+              {/* Grid Preview Foto Produk */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-[160px] overflow-y-auto p-1">
+                {productImages.map((img, idx) => (
+                  <div
+                    key={img.id}
+                    className="group relative aspect-square rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-white dark:bg-[#18181B] overflow-hidden shadow-2xs flex flex-col items-center justify-center"
+                  >
+                    <img
+                      src={img.localPreviewUrl || img.url}
+                      alt={img.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(img.id)}
+                        className="p-1 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer"
+                        title="Hapus foto"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                    <span className="absolute bottom-1 left-1 font-mono text-[8.5px] px-1 py-0.2 rounded bg-black/70 text-white font-bold backdrop-blur-2xs">
+                      #{idx + 1}
+                    </span>
+                  </div>
+                ))}
+
+                {/* Tombol Tambah Foto */}
+                <label className="aspect-square rounded-xl border-2 border-dashed border-[#D1D5DB] dark:border-[#3F3F46] hover:border-black dark:hover:border-white bg-white dark:bg-[#18181B] flex flex-col items-center justify-center cursor-pointer transition-all group">
+                  <div className="size-7 rounded-full bg-[#F3F4F6] dark:bg-[#27272A] flex items-center justify-center text-[#6B7280] group-hover:text-black dark:group-hover:text-white transition-colors">
+                    {isUploadingImage ? (
+                      <div className="size-3.5 border-2 border-black/40 border-t-black rounded-full animate-spin" />
+                    ) : (
+                      <Plus size={14} />
+                    )}
+                  </div>
+                  <span className="text-[9.5px] font-semibold text-[#6B7280] group-hover:text-black dark:group-hover:text-white mt-1 text-center px-1">
+                    {isUploadingImage ? 'Upload...' : 'Tambah Foto'}
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    disabled={isUploadingImage}
+                    onChange={(e) => handleUploadMultipleImages(e.target.files)}
+                  />
+                </label>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-[10.5px] text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                <span>
+                  💡 <strong>Tip Multi-Image</strong>: Unggah foto tampak depan, kartu di standee kasir, & pelanggan tap HP. AI akan mencocokkan tiap adegan dengan foto yang sesuai!
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Section 2: Hasil Storyboard Multi-Scene */}
+          {/* Section 2: Hasil Storyboard Multi-Scene dengan Visual Keyframe Tag */}
           {storyboard && (
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-[#E5E7EB] dark:border-[#27272A] pb-2">
@@ -219,12 +276,15 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                 {storyboard.scenes.map((scene, idx) => {
                   const isCopied = copiedIndex === idx
+                  // Cari gambar referensi yang cocok dari list gambar jika ada
+                  const matchedImg = productImages[idx] || productImages[0]
+
                   return (
                     <div
                       key={idx}
                       className="rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-white dark:bg-[#18181B] p-3.5 flex flex-col justify-between shadow-2xs space-y-3"
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         <div className="flex items-center justify-between border-b border-[#F3F4F6] dark:border-[#27272A] pb-1.5">
                           <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] text-black dark:text-white">
                             SCENE {scene.scene_number} ({scene.duration})
@@ -233,6 +293,25 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                             {scene.name}
                           </span>
                         </div>
+
+                        {/* Thumbnail Preview Referensi Gambar yang Dipakai di Scene Ini */}
+                        {matchedImg && (
+                          <div className="flex items-center gap-2 p-1.5 rounded-lg bg-[#F9FAFB] dark:bg-[#121214] border border-[#E5E7EB] dark:border-[#27272A]">
+                            <img
+                              src={matchedImg.localPreviewUrl || matchedImg.url}
+                              alt={matchedImg.name}
+                              className="size-8 rounded-md object-cover shrink-0 border border-[#E5E7EB]"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[9.5px] font-semibold text-black dark:text-white truncate">
+                                Keyframe Ref: {scene.reference_image_used || matchedImg.name}
+                              </p>
+                              <p className="font-mono text-[8.5px] text-emerald-600 dark:text-emerald-400">
+                                Match to Image #{Math.min(idx + 1, productImages.length)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                         <div>
                           <p className="font-semibold text-[11px] text-black dark:text-white mb-0.5">Visual Scene:</p>
@@ -321,7 +400,7 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
         {/* Modal Footer */}
         <div className="p-3 sm:p-4 border-t border-[#E5E7EB] dark:border-[#27272A] bg-[#FAFAFA] dark:bg-[#202023] flex items-center justify-between text-[11px]">
           <span className="text-[#6B7280]">
-            💡 Tips: Untuk hasil video paling mirip produk fisik, pilih opsi <strong>Image-to-Video</strong> di Kling/Runway dan upload foto kartu produk.
+            💡 Tips: Di Kling AI atau Runway, unggah masing-masing foto referensi di mode <strong>Image-to-Video</strong> untuk menjaga konsistensi bentuk fisik kartu di setiap scene.
           </span>
           <button
             type="button"

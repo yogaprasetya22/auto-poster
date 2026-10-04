@@ -8,7 +8,8 @@ export default async function handler(req, res) {
   const {
     productName = 'JAGRES Google Review Card',
     productImageUrl = '',
-    targetPlatform = 'all', // flow.google.com, kling, runway, midjourney
+    productImages = [], // Array of { name, url }
+    targetPlatform = 'all',
     customAngle = '',
   } = req.body || {};
 
@@ -19,6 +20,11 @@ export default async function handler(req, res) {
 
   const baseKnowledge = await getDynamicKnowledgeContext();
 
+  // Susun daftar referensi gambar produk
+  const imagesListText = productImages && productImages.length > 0
+    ? productImages.map((img, i) => `Gambar ${i + 1} (${img.name}): ${img.url}`).join('\n')
+    : productImageUrl || '(Gunakan deskripsi fisik kartu PVC NFC hitam matte standar ATM)';
+
   const prompt = `
 Peran Anda adalah AI Director & Creative Prompt Engineer spesialis Video Iklan Komersial Generatif (Google Flow / flow.google.com, Kling AI, Runway Gen-3, Luma Dream Machine, Midjourney).
 
@@ -27,8 +33,14 @@ ${baseKnowledge}
 
 Informasi Produk Kampanye:
 - Nama Produk: ${productName}
-- URL Mentahan Gambar Produk Asli: ${productImageUrl || '(Gunakan deskripsi fisik kartu PVC NFC hitam matte standar ATM)'}
+- Galeri Referensi Mentahan Gambar Produk Asli:
+${imagesListText}
 - Angle Khusus / Brief: ${customAngle || 'Iklan promosi harga promo mulai 25 ribu untuk pemilik resto/kafe/klinik agar ulasan Google Maps ramai'}
+
+PENTING TENTANG MULTI-IMAGE REFERENSI:
+Jika terdapat beberapa gambar produk yang diunggah (misal: tampak depan kartu, kartu di meja kasir, akrilik standee, atau tap HP):
+- Sesuaikan alur cerita (Scene 1, Scene 2, Scene 3) agar selaras dengan gambar-gambar tersebut.
+- Di setiap adegan sertakan field "reference_image_used": sebutkan nama gambar yang paling cocok dijadikan keyframe adegan tersebut.
 
 Tugas Anda:
 Buat Multi-Scene Video Storyboard 3 Bagian (Format Vertikal 9:16 untuk Reels & TikTok) lengkap dengan Prompt AI Generatif yang SANGAT DETAIL, fotorealistis, dan langsung siap di-copy-paste ke agent video (Google Flow / Kling / Runway).
@@ -47,6 +59,7 @@ Keluarkan HANYA JSON murni tanpa markdown wrapper/backtick dengan struktur:
       "scene_number": 1,
       "name": "Hook Problem",
       "duration": "0-3s",
+      "reference_image_used": "Nama gambar referensi yang cocok (atau 'Stock Cafe Scene')",
       "storyboard_id": "Visual aksi dan suasana adegan dalam Bahasa Indonesia",
       "voiceover_id": "Teks naskah pengisi suara / subtitle dalam Bahasa Indonesia",
       "prompt_english": "Ultra-detailed prompt in English for AI video generator (Kling/Runway/Google Flow). Include camera motion, lighting, 4k photorealistic cinematic commercial 9:16 vertical, shallow depth of field.",
@@ -56,6 +69,7 @@ Keluarkan HANYA JSON murni tanpa markdown wrapper/backtick dengan struktur:
       "scene_number": 2,
       "name": "Product Action & NFC Demo",
       "duration": "3-8s",
+      "reference_image_used": "Nama gambar referensi foto produk yang dipakai",
       "storyboard_id": "Tangan memegang smartphone mendekatkan ke kartu produk di meja kasir...",
       "voiceover_id": "Cukup tap 1 detik, langsung keluar bintang lima...",
       "prompt_english": "Macro shot, customer holding modern smartphone tapping onto the black matte NFC smart review card placed on wooden cafe counter. Clean seamless tap, phone screen lights up with Google Maps 5-star review modal, cinematic warm cafe lighting, 8k commercial cinematography, vertical 9:16.",
@@ -65,6 +79,7 @@ Keluarkan HANYA JSON murni tanpa markdown wrapper/backtick dengan struktur:
       "scene_number": 3,
       "name": "Offer & CTA Climax",
       "duration": "8-12s",
+      "reference_image_used": "Nama gambar referensi standee/paket jika ada",
       "storyboard_id": "Tampilan produk kartu dengan standee akrilik dan highlight harga promo mulai 25 ribu...",
       "voiceover_id": "Mulai 25 ribu aja, upgrade toko kamu sekarang! Klik link di bio.",
       "prompt_english": "Hero product commercial showcase, the smart review card on sleek acrylic standee next to cafe espresso machine, soft bokeh lights, commercial grade slow camera push-in, clean premium aesthetics, 9:16 vertical video.",
