@@ -126,89 +126,157 @@ function parseInlineMarkdown(text: string) {
 }
 
 function renderCleanMarkdown(content: string) {
-  const lines = content.split('\n')
-  return (
-    <div className="space-y-2 text-[12.5px] leading-relaxed text-[#1F2937] dark:text-[#E5E7EB]">
-      {lines.map((rawLine, idx) => {
-        const line = rawLine.trimEnd()
-        if (!line.trim()) return <div key={idx} className="h-1.5" />
+  const rawLines = content.split('\n')
+  const elements: React.ReactNode[] = []
+  let i = 0
 
-        // Horizontal Rule
-        if (line.trim() === '---' || line.trim() === '***') {
-          return <hr key={idx} className="my-3 border-[#E5E7EB] dark:border-[#27272A]" />
-        }
+  while (i < rawLines.length) {
+    const rawLine = rawLines[i]
+    const line = rawLine.trimEnd()
 
-        // Headings
-        if (line.startsWith('# ')) {
-          return (
-            <h2 key={idx} className="text-[17px] font-black tracking-tight text-black dark:text-white pt-2 pb-1 border-b border-[#E5E7EB] dark:border-[#27272A]">
-              {parseInlineMarkdown(line.replace('# ', ''))}
-            </h2>
-          )
-        }
-        if (line.startsWith('## ')) {
-          return (
-            <h3 key={idx} className="text-[15px] font-bold tracking-tight text-black dark:text-white pt-2 pb-0.5 border-b border-[#E5E7EB]/60 dark:border-[#27272A]/60">
-              {parseInlineMarkdown(line.replace('## ', ''))}
-            </h3>
-          )
-        }
-        if (line.startsWith('### ')) {
-          return (
-            <h4 key={idx} className="text-[13.5px] font-bold text-black dark:text-white pt-1.5">
-              {parseInlineMarkdown(line.replace('### ', ''))}
-            </h4>
-          )
-        }
+    // 1. Cek apakah ini awal Markdown Table: | Kolom 1 | Kolom 2 |
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      const tableLines: string[] = []
+      while (i < rawLines.length && rawLines[i].trim().startsWith('|') && rawLines[i].trim().endsWith('|')) {
+        tableLines.push(rawLines[i].trim())
+        i++
+      }
 
-        // Blockquote
-        if (line.trim().startsWith('> ')) {
-          return (
-            <blockquote key={idx} className="border-l-3 border-black dark:border-white pl-3.5 py-1 text-[#4B5563] dark:text-[#9CA3AF] italic bg-[#F9FAFB] dark:bg-[#18181B] rounded-r my-1">
-              {parseInlineMarkdown(line.trim().replace(/^>\s+/, ''))}
-            </blockquote>
-          )
-        }
+      if (tableLines.length >= 2) {
+        const headerCells = tableLines[0].split('|').slice(1, -1).map((c) => c.trim())
+        // Baris 1 biasanya separator | :--- | :--- |
+        const bodyLines = tableLines.slice(1).filter((l) => !l.replace(/[:\-\s|]/g, '') == false)
 
-        // Numbered List
-        const numMatch = line.match(/^(\d+)\.\s+(.*)/)
-        if (numMatch) {
-          return (
-            <div key={idx} className="flex items-start gap-2 pl-2 my-0.5">
-              <span className="font-mono font-bold text-[11px] text-[#4B5563] dark:text-[#9CA3AF] shrink-0 pt-0.5 min-w-[14px]">
-                {numMatch[1]}.
-              </span>
-              <div className="flex-1 text-[#1F2937] dark:text-[#E5E7EB]">
-                {parseInlineMarkdown(numMatch[2])}
-              </div>
-            </div>
-          )
-        }
-
-        // Unordered List & Nested Bullet
-        if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-          const isNested = line.startsWith('   ') || line.startsWith('\t')
-          return (
-            <div key={idx} className={`flex items-start gap-2 my-0.5 ${isNested ? 'pl-6' : 'pl-2'}`}>
-              <span className="text-black dark:text-white shrink-0 pt-1 leading-none text-[8px]">
-                {isNested ? '◦' : '●'}
-              </span>
-              <div className="flex-1 text-[#1F2937] dark:text-[#E5E7EB]">
-                {parseInlineMarkdown(line.trim().replace(/^[-*]\s+/, ''))}
-              </div>
-            </div>
-          )
-        }
-
-        // Paragraph normal
-        return (
-          <p key={idx} className="leading-relaxed text-[#374151] dark:text-[#D1D5DB]">
-            {parseInlineMarkdown(line)}
-          </p>
+        elements.push(
+          <div key={`table-${i}`} className="my-3 overflow-x-auto rounded-lg border border-[#E5E7EB] dark:border-[#27272A] shadow-2xs">
+            <table className="w-full text-left text-[11.5px] border-collapse">
+              <thead className="bg-[#F9FAFB] dark:bg-[#18181B] border-b border-[#E5E7EB] dark:border-[#27272A]">
+                <tr>
+                  {headerCells.map((header, hIdx) => (
+                    <th key={hIdx} className="px-3 py-2 font-bold text-black dark:text-white uppercase tracking-wider text-[10.5px]">
+                      {parseInlineMarkdown(header)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E7EB] dark:divide-[#27272A] bg-white dark:bg-[#121214]">
+                {bodyLines.map((rowLine, rIdx) => {
+                  const cells = rowLine.split('|').slice(1, -1).map((c) => c.trim())
+                  return (
+                    <tr key={rIdx} className="hover:bg-[#F9FAFB]/80 dark:hover:bg-[#18181B]/80 transition-colors">
+                      {cells.map((cell, cIdx) => (
+                        <td key={cIdx} className="px-3 py-2 text-[#374151] dark:text-[#D1D5DB] whitespace-normal">
+                          {parseInlineMarkdown(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )
-      })}
-    </div>
-  )
+        continue
+      }
+    }
+
+    if (!line.trim()) {
+      elements.push(<div key={i} className="h-1.5" />)
+      i++
+      continue
+    }
+
+    // Horizontal Rule
+    if (line.trim() === '---' || line.trim() === '***') {
+      elements.push(<hr key={i} className="my-3 border-[#E5E7EB] dark:border-[#27272A]" />)
+      i++
+      continue
+    }
+
+    // Headings
+    if (line.startsWith('# ')) {
+      elements.push(
+        <h2 key={i} className="text-[17px] font-black tracking-tight text-black dark:text-white pt-2 pb-1 border-b border-[#E5E7EB] dark:border-[#27272A]">
+          {parseInlineMarkdown(line.replace('# ', ''))}
+        </h2>
+      )
+      i++
+      continue
+    }
+    if (line.startsWith('## ')) {
+      elements.push(
+        <h3 key={i} className="text-[15px] font-bold tracking-tight text-black dark:text-white pt-2 pb-0.5 border-b border-[#E5E7EB]/60 dark:border-[#27272A]/60">
+          {parseInlineMarkdown(line.replace('## ', ''))}
+        </h3>
+      )
+      i++
+      continue
+    }
+    if (line.startsWith('### ')) {
+      elements.push(
+        <h4 key={i} className="text-[13.5px] font-bold text-black dark:text-white pt-1.5">
+          {parseInlineMarkdown(line.replace('### ', ''))}
+        </h4>
+      )
+      i++
+      continue
+    }
+
+    // Blockquote
+    if (line.trim().startsWith('> ')) {
+      elements.push(
+        <blockquote key={i} className="border-l-3 border-black dark:border-white pl-3.5 py-1 text-[#4B5563] dark:text-[#9CA3AF] italic bg-[#F9FAFB] dark:bg-[#18181B] rounded-r my-1">
+          {parseInlineMarkdown(line.trim().replace(/^>\s+/, ''))}
+        </blockquote>
+      )
+      i++
+      continue
+    }
+
+    // Numbered List
+    const numMatch = line.match(/^(\d+)\.\s+(.*)/)
+    if (numMatch) {
+      elements.push(
+        <div key={i} className="flex items-start gap-2 pl-2 my-0.5">
+          <span className="font-mono font-bold text-[11px] text-[#4B5563] dark:text-[#9CA3AF] shrink-0 pt-0.5 min-w-[14px]">
+            {numMatch[1]}.
+          </span>
+          <div className="flex-1 text-[#1F2937] dark:text-[#E5E7EB]">
+            {parseInlineMarkdown(numMatch[2])}
+          </div>
+        </div>
+      )
+      i++
+      continue
+    }
+
+    // Unordered List & Nested Bullet
+    if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+      const isNested = line.startsWith('   ') || line.startsWith('\t')
+      elements.push(
+        <div key={i} className={`flex items-start gap-2 my-0.5 ${isNested ? 'pl-6' : 'pl-2'}`}>
+          <span className="text-black dark:text-white shrink-0 pt-1 leading-none text-[8px]">
+            {isNested ? '◦' : '●'}
+          </span>
+          <div className="flex-1 text-[#1F2937] dark:text-[#E5E7EB]">
+            {parseInlineMarkdown(line.trim().replace(/^[-*]\s+/, ''))}
+          </div>
+        </div>
+      )
+      i++
+      continue
+    }
+
+    // Paragraph normal
+    elements.push(
+      <p key={i} className="leading-relaxed text-[#374151] dark:text-[#D1D5DB]">
+        {parseInlineMarkdown(line)}
+      </p>
+    )
+    i++
+  }
+
+  return <div className="space-y-2 text-[12.5px] leading-relaxed text-[#1F2937] dark:text-[#E5E7EB]">{elements}</div>
 }
 
 export function SettingsPage() {
@@ -775,7 +843,7 @@ export function SettingsPage() {
                     onChange={(e) => setKnowledgeForm({ ...knowledgeForm, content: e.target.value })}
                     rows={8}
                     placeholder="Tuliskan format Markdown (contoh: **Fitur Utama**, *Harga*: Rp150.000, - Poin 1)..."
-                    className="w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring leading-relaxed"
+                    className="w-full min-h-[60vh]  rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring leading-relaxed"
                     required
                   />
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
@@ -784,7 +852,7 @@ export function SettingsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="w-full min-h-[320px] rounded-lg border border-[#E5E7EB] dark:border-[#27272A] bg-white dark:bg-[#121214] p-5 text-[12.5px] leading-relaxed overflow-y-auto max-h-[460px] shadow-2xs">
+                <div className="w-full min-h-[60vh] rounded-lg border border-[#E5E7EB] dark:border-[#27272A] bg-white dark:bg-[#121214] p-5 text-[12.5px] leading-relaxed overflow-y-auto max-h-[460px] shadow-2xs">
                   {knowledgeForm.content.trim() ? (
                     renderCleanMarkdown(knowledgeForm.content)
                   ) : (
