@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Sparkles, Copy, Check, Upload, ExternalLink, X, Plus, Trash2, Image as ImageIcon } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Sparkles, Copy, Check, Upload, ExternalLink, X, Plus, Trash2, Image as ImageIcon, Eye, Code2 } from 'lucide-react'
 import { uploadToGDrive } from '@/shared/lib/gdrive'
 import { toast } from 'sonner'
 
@@ -31,9 +31,75 @@ interface StoryboardData {
   }
 }
 
+// ponytail: Helper parser markdown inline & multi-line ringkas
+function parseBriefMarkdown(text: string) {
+  const parts: React.ReactNode[] = []
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index))
+    }
+    const token = match[0]
+    if (token.startsWith('**') && token.endsWith('**')) {
+      parts.push(
+        <strong key={match.index} className="font-bold text-black dark:text-white">
+          {token.slice(2, -2)}
+        </strong>
+      )
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      parts.push(
+        <em key={match.index} className="italic text-[#374151] dark:text-[#D1D5DB]">
+          {token.slice(1, -1)}
+        </em>
+      )
+    } else if (token.startsWith('`') && token.endsWith('`')) {
+      parts.push(
+        <code key={match.index} className="px-1 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] font-mono text-[10.5px] text-[#DC2626] dark:text-[#F87171]">
+          {token.slice(1, -1)}
+        </code>
+      )
+    }
+    lastIndex = regex.lastIndex
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
+  return parts.length > 0 ? parts : text
+}
+
+function renderBriefMarkdown(content: string) {
+  const lines = content.split('\n')
+  return (
+    <div className="space-y-1.5 text-[11.5px] leading-relaxed text-[#1F2937] dark:text-[#E5E7EB]">
+      {lines.map((line, idx) => {
+        if (!line.trim()) return <div key={idx} className="h-1" />
+        if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+          return (
+            <div key={idx} className="flex items-start gap-1.5 pl-1.5">
+              <span className="text-black dark:text-white shrink-0 pt-1 text-[7px]">●</span>
+              <span className="flex-1">{parseBriefMarkdown(line.trim().replace(/^[-*]\s+/, ''))}</span>
+            </div>
+          )
+        }
+        if (line.startsWith('### ')) {
+          return <h5 key={idx} className="font-bold text-xs text-black dark:text-white pt-1">{parseBriefMarkdown(line.replace('### ', ''))}</h5>
+        }
+        if (line.startsWith('## ') || line.startsWith('# ')) {
+          return <h4 key={idx} className="font-bold text-[12.5px] text-black dark:text-white pt-1 border-b border-[#E5E7EB] dark:border-[#27272A] pb-0.5">{parseBriefMarkdown(line.replace(/^#+\s+/, ''))}</h4>
+        }
+        return <p key={idx}>{parseBriefMarkdown(line)}</p>
+      })}
+    </div>
+  )
+}
+
 export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [productName, setProductName] = useState('JAGRES Google Review Card')
-  const [customAngle, setCustomAngle] = useState('Promo mulai 25 ribu untuk kafe/resto/klinik agar ulasan Google Maps ramai')
+  const [customAngle, setCustomAngle] = useState(
+    '### Konsep Video Promo Kilat\n- **Harga Promo**: Mulai Rp25.000 (sekali beli aktif selamanya)\n- **Target**: Kafe, resto, dan klinik kecantikan\n- **Goal**: Dorong ulasan bintang 5 Google Maps tanpa repot ketik manual.'
+  )
+  const [angleTab, setAngleTab] = useState<'write' | 'preview'>('write')
   const [productImages, setProductImages] = useState<ProductImageItem[]>([])
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -158,16 +224,71 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-black dark:text-white mb-1 block">
-                  Angle Iklan / Brief Tambahan
-                </label>
-                <textarea
-                  rows={3}
-                  value={customAngle}
-                  onChange={(e) => setCustomAngle(e.target.value)}
-                  placeholder="Contoh: Promo mulai 25 ribu untuk kafe dan resto..."
-                  className="w-full rounded-lg border border-[#D1D5DB] dark:border-[#27272A] bg-white dark:bg-[#18181B] px-3 py-2 text-xs font-medium text-black dark:text-white focus:outline-none focus:ring-1 focus:ring-black leading-relaxed"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-semibold text-black dark:text-white">
+                    Angle Iklan / Brief Tambahan (Markdown)
+                  </label>
+                  <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46]">
+                    <button
+                      type="button"
+                      onClick={() => setAngleTab('write')}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] transition-all cursor-pointer ${
+                        angleTab === 'write'
+                          ? 'bg-white dark:bg-[#18181B] text-black dark:text-white font-bold shadow-2xs'
+                          : 'text-[#6B7280] hover:text-black dark:hover:text-white'
+                      }`}
+                    >
+                      <Code2 size={11} />
+                      <span>Tulis</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAngleTab('preview')}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] transition-all cursor-pointer ${
+                        angleTab === 'preview'
+                          ? 'bg-white dark:bg-[#18181B] text-black dark:text-white font-bold shadow-2xs'
+                          : 'text-[#6B7280] hover:text-black dark:hover:text-white'
+                      }`}
+                    >
+                      <Eye size={11} />
+                      <span>Preview</span>
+                    </button>
+                  </div>
+                </div>
+
+                {angleTab === 'write' ? (
+                  <div className="space-y-1">
+                    <textarea
+                      value={customAngle}
+                      onChange={(e) => {
+                        setCustomAngle(e.target.value)
+                        // Ponytail: Auto-adjust height sesuai baris konten secara native
+                        e.target.style.height = 'auto'
+                        e.target.style.height = `${Math.min(220, Math.max(80, e.target.scrollHeight))}px`
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.height = 'auto'
+                        e.target.style.height = `${Math.min(220, Math.max(80, e.target.scrollHeight))}px`
+                      }}
+                      placeholder="Tuliskan format Markdown (contoh: **Promo**, - Target: Kafe, ### Angle)..."
+                      className="w-full rounded-lg border border-[#D1D5DB] dark:border-[#27272A] bg-white dark:bg-[#18181B] px-3 py-2 text-xs font-mono text-[11.5px] text-black dark:text-white focus:outline-none focus:ring-1 focus:ring-black leading-relaxed transition-all resize-y min-h-[85px] max-h-[220px]"
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-[#6B7280] font-mono">
+                      <span>Mendukung: **tebal**, *miring*, `code`, - list</span>
+                      <span>{customAngle.length} karakter</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full min-h-[85px] max-h-[220px] rounded-lg border border-[#E5E7EB] dark:border-[#27272A] bg-white dark:bg-[#18181B] p-3 text-xs leading-relaxed overflow-y-auto shadow-2xs">
+                    {customAngle.trim() ? (
+                      renderBriefMarkdown(customAngle)
+                    ) : (
+                      <p className="text-[#9CA3AF] italic text-center py-4 text-[11px]">
+                        Belum ada teks brief. Ketik di tab "Tulis" untuk melihat preview markdown.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <button
