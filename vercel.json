@@ -1,10 +1,11 @@
 {
   "cleanUrls": false,
+  "crons": [
+    { "path": "/api/cron/dispatcher", "schedule": "* * * * *" }
+  ],
   "rewrites": [
     { "source": "/tiktoknHtwOvb6UIzVzqtJ0jcpQUhunhpHwOLA.txt", "destination": "/tiktoknHtwOvb6UIzVzqtJ0jcpQUhunhpHwOLA.txt" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!tiktok.*|api/|.*\\.[\\w]+$).*)", "destination": "/index.html" }
+    { "source": "/((?!tiktok.*|api/|.*\\\\.[\\\\w]+$).*)", "destination": "/index.html" }
   ]
 }
-
-

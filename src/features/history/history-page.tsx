@@ -51,6 +51,18 @@ export function HistoryPage() {
     }
   }, [])
 
+  // ponytail: Auto-poll dispatcher setiap 20s HANYA kalau ada target IN_PROGRESS
+  useEffect(() => {
+    const hasInProgress = targets.some((t) => t.status === 'IN_PROGRESS')
+    if (!hasInProgress) return
+
+    const interval = setInterval(() => {
+      fetch('/api/cron/dispatcher').catch(() => {})
+    }, 20_000)
+
+    return () => clearInterval(interval)
+  }, [targets])
+
   async function retry(targetId: string) {
     const { error } = await supabase
       .from('post_targets')

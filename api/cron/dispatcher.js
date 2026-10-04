@@ -16,37 +16,47 @@ export const config = { maxDuration: 10 };
 
 export default async function handler(req, res) {
   const isDev = process.env.NODE_ENV !== 'production';
-  const isAuth = req.headers.authorization === `Bearer ${process.env.CRON_SECRET_KEY}`;
+  const cronKey = process.env.CRON_SECRET_KEY;
+  const isAuth = req.headers.authorization === `Bearer ${cronKey}` ||
+    new URL(req.url, 'http://localhost').searchParams.get('key') === cronKey;
   if (!isAuth && !isDev) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const start = Date.now();
   try {
-    // Phase 1: Poll active targets
+    // Phase 1: Poll active targets (max 2, hemat time budget 10s)
     const { data: active } = await supabase
       .from('post_targets')
       .select('*, connected_accounts(*), posts(*)')
       .eq('status', 'IN_PROGRESS')
-      .limit(4);
+      .limit(2);
 
     if (active?.length) {
-      for (const t of active) await pollTarget(t);
+      for (const t of active) {
+        if (Date.now() - start > 7000) break; // time budget guard
+        await pollTarget(t);
+      }
     }
 
-    // Phase 2: Pick up scheduled posts or any targets that are currently PENDING (e.g. from Retry)
+    // Phase 2 hanya jalan kalau masih ada time budget
+    if (Date.now() - start > 7000) {
+      return res.status(200).json({ success: true, durationMs: Date.now() - start, skipped: 'phase2_time_budget' });
+    }
+
     const { data: pendingTargets } = await supabase
       .from('post_targets')
       .select('*, connected_accounts(*), posts(*)')
       .eq('status', 'PENDING')
-      .limit(4);
+      .limit(2);
 
     if (pendingTargets && pendingTargets.length > 0) {
       for (const t of pendingTargets) {
+        if (Date.now() - start > 8000) break; // hard guard
         if (t.posts) {
           await supabase.from('posts').update({ status: 'PROCESSING' }).eq('id', t.posts.id);
           await initTarget(t.posts, t);
-          await sleep(2000); // stagger jitter
+          await sleep(500); // ponytail: 2s terlalu boros, 500ms cukup
         }
       }
     } else {
@@ -65,7 +75,7 @@ export default async function handler(req, res) {
         for (const t of post.post_targets) {
           if (t.status === 'PENDING') {
             await initTarget(post, t);
-            await sleep(2000); // stagger jitter
+              await sleep(500);
           }
         }
 
@@ -195,7 +205,9 @@ async function initTarget(post, target) {
       const d = await r.json();
       if (!d.id) throw new Error(JSON.stringify(d.error || d));
       await supabase.from('post_targets').update({
-        status: 'IN_PROGRESS', async_container_id: d.id, last_polled_at: new Date().toISOString(),
+        status: 'IN_PROGRESS', async_container_id: d.id,
+        executed_at: new Date().toISOString(),
+        last_polled_at: new Date().toISOString(),
       }).eq('id', target.id);
     } else if (target.platform === 'tiktok') {
       // TikTok Open API: Ambil buffer video dari local path, direct Google Drive, atau streaming URL
@@ -255,6 +267,7 @@ async function initTarget(post, target) {
       await supabase.from('post_targets').update({
         status: 'IN_PROGRESS',
         async_container_id: initData.data.publish_id,
+        executed_at: new Date().toISOString(),
         last_polled_at: new Date().toISOString(),
       }).eq('id', target.id);
     } else if (target.platform === 'facebook_page') {
@@ -339,8 +352,8 @@ async function pollTarget(target) {
         const errMsg = d.error_message || d.status || 'Meta transcoding failed (Spesifikasi video tidak didukung atau URL tidak dapat diunduh server Meta)';
         throw new Error(errMsg);
       } else {
-        // Hitung durasi nyata sejak container dibuat / diproses
-        const initiatedTime = target.executed_at || target.created_at || new Date().toISOString();
+        // Hitung durasi nyata sejak container dibuat (executed_at di-set saat initTarget)
+        const initiatedTime = target.executed_at || target.last_polled_at || new Date().toISOString();
         const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
         
         // Timeout realistis: 15 menit waktu nyata Meta
@@ -368,7 +381,7 @@ async function pollTarget(target) {
       } else if (st === 'FAILED') {
         throw new Error(d.data?.fail_reason || 'TikTok publish failed');
       } else {
-        const initiatedTime = target.executed_at || target.created_at || new Date().toISOString();
+        const initiatedTime = target.executed_at || target.last_polled_at || new Date().toISOString();
         const minutesElapsed = (Date.now() - new Date(initiatedTime).getTime()) / 60000;
         if (minutesElapsed > 15) {
           throw new Error('TikTok transcoding timeout (>15 menit waktu nyata)');
