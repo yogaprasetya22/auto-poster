@@ -27,7 +27,7 @@ export function TodaySchedule({ todayPosts }: TodayScheduleProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {todayPosts.map((p) => (
+          {todayPosts.slice(0, 6).map((p) => (
             <div
               key={p.id}
               className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg bg-[#F9FAFB] dark:bg-[#202023] border border-[#E5E7EB] dark:border-[#27272A] hover:border-black dark:hover:border-white hover:bg-white dark:hover:bg-[#18181B] transition-all gap-3 group"
@@ -63,6 +63,17 @@ export function TodaySchedule({ todayPosts }: TodayScheduleProps) {
               </Link>
             </div>
           ))}
+
+          {todayPosts.length > 6 && (
+            <div className="pt-1 text-center">
+              <Link
+                to="/history"
+                className="text-xs font-medium text-[#6B7280] hover:text-black dark:hover:text-white hover:underline transition-colors"
+              >
+                + Lihat {todayPosts.length - 6} postingan lainnya di Riwayat ↗
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

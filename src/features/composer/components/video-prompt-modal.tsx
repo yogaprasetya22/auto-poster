@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sparkles, Copy, Check, Upload, ExternalLink, X, Plus, Trash2, Image as ImageIcon, Eye, Code2 } from 'lucide-react'
+import { Sparkles, Copy, Check, Upload, ExternalLink, X, Plus, Trash2, Image as ImageIcon, Eye, Code2, Wand2, Bot, SlidersHorizontal } from 'lucide-react'
 import { uploadToGDrive } from '@/shared/lib/gdrive'
 import { toast } from 'sonner'
 import {
@@ -33,6 +33,7 @@ interface StoryboardData {
   title: string
   concept_overview: string
   scenes: Scene[]
+  full_flow_prompt?: string
   agent_instructions?: {
     google_flow?: string
     image_prompt_reference?: string
@@ -114,6 +115,49 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
   const [storyboard, setStoryboard] = useState<StoryboardData | null>(null)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [copiedKeyframe, setCopiedKeyframe] = useState(false)
+  const [copiedMasterFlowPrompt, setCopiedMasterFlowPrompt] = useState(false)
+
+  // AI Concept Generator Agent states (Tuning & Prompt)
+  const [showConceptAgent, setShowConceptAgent] = useState(false)
+  const [conceptPrompt, setConceptPrompt] = useState('')
+  const [conceptTone, setConceptTone] = useState('commercial')
+  const [isGeneratingConcept, setIsGeneratingConcept] = useState(false)
+
+  async function handleGenerateConcept() {
+    setIsGeneratingConcept(true)
+    const toastId = toast.loading('AI Agent sedang merancang konsep brief iklan...')
+    try {
+      const res = await fetch('/api/ai/concept-generator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName,
+          instruction: conceptPrompt,
+          tone: conceptTone,
+        }),
+      })
+      const text = await res.text()
+      let data: any = {}
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        throw new Error(`Respons server tidak valid (${res.status}): ${text.slice(0, 100)}`)
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Server error (${res.status})`)
+      }
+      
+      setCustomAngle(data.concept)
+      setAngleTab('write')
+      setShowConceptAgent(false)
+      toast.success('✨ Konsep brief berhasil dibuat & diaplikasikan!', { id: toastId })
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menghasilkan konsep', { id: toastId })
+    } finally {
+      setIsGeneratingConcept(false)
+    }
+  }
 
   async function handleUploadMultipleImages(files: FileList | null) {
     if (!files || files.length === 0) return
@@ -215,10 +259,10 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
 
         {/* Drawer Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs flex-1">
-          {/* Section 1: Konfigurasi Produk & Upload Galeri Multi-Image */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 p-4 rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-[#F9FAFB] dark:bg-[#121214]">
-            {/* Form Kiri */}
-            <div className="md:col-span-5 space-y-3">
+          {/* Section 1: Konfigurasi Produk & Upload Galeri Multi-Image (Vertical Single Column) */}
+          <div className="flex flex-col gap-4 p-4 rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-[#F9FAFB] dark:bg-[#121214]">
+            {/* Form Input Produk & Brief */}
+            <div className="space-y-3">
               <div>
                 <label className="text-[11px] font-semibold text-black dark:text-white mb-1 block">
                   Nama Produk & Brand
@@ -233,9 +277,23 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-semibold text-black dark:text-white">
-                    Angle Iklan / Brief Tambahan (Markdown)
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-semibold text-black dark:text-white">
+                      Angle Iklan / Brief Tambahan (Markdown)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowConceptAgent((prev) => !prev)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold border transition-all cursor-pointer ${
+                        showConceptAgent
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
+                          : 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/50'
+                      }`}
+                    >
+                      <Sparkles size={11} />
+                      <span>{showConceptAgent ? 'Tutup Tuning AI' : '✨ AI Agent Buat Konsep'}</span>
+                    </button>
+                  </div>
                   <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46]">
                     <button
                       type="button"
@@ -263,6 +321,90 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                     </button>
                   </div>
                 </div>
+
+                {/* AI Agent Tuning Box (Collapsible) */}
+                {showConceptAgent && (
+                  <div className="mb-3 p-3 rounded-xl border border-purple-200 dark:border-purple-800/80 bg-purple-50/50 dark:bg-purple-950/20 space-y-2.5 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-purple-900 dark:text-purple-200 font-bold text-[11px]">
+                        <Bot size={13} />
+                        <span>AI Concept Tuning & Prompt Generator</span>
+                      </div>
+                      <span className="font-mono text-[9px] text-purple-600 dark:text-purple-400">GEMINI AGENT</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        value={conceptPrompt}
+                        onChange={(e) => setConceptPrompt(e.target.value)}
+                        placeholder="Ketik instruksi/tuningan konsep (contoh: Konsep dramatis resto sepi, fokus ke pemilik salon, dll)..."
+                        className="w-full rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-[#18181B] px-3 py-1.5 text-xs text-black dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-600"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !isGeneratingConcept) {
+                            e.preventDefault()
+                            handleGenerateConcept()
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* Quick Tuning Presets / Style Persona */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] font-medium mr-1">Pilihan Tuning:</span>
+                      {[
+                        { label: '🔥 Promo Kilat 25rb', val: 'Fokus promo flash sale kartu review mulai 25 ribu rupiah untuk UMKM' },
+                        { label: '⭐ Rating Google Drop', val: 'Cerita kafe sepi pengunjung gara-gara ulasan bintang 3 dan solusi NFC tap 1 detik' },
+                        { label: '💼 Peluang Reseller', val: 'Peluang bisnis agen reseller produk smart card keuntungan jutaan rupiah' },
+                        { label: '✨ Mewah / Elegan', val: 'Tampilan premium estetis untuk restoran fine-dining & klinik kecantikan' },
+                      ].map((preset, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setConceptPrompt(preset.val)}
+                          className="px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-900 bg-white dark:bg-[#18181B] text-[10px] text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950 transition-colors cursor-pointer"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1 text-[10.5px]">
+                        <span className="text-[#6B7280]">Tone:</span>
+                        <select
+                          value={conceptTone}
+                          onChange={(e) => setConceptTone(e.target.value)}
+                          className="rounded border border-[#D1D5DB] dark:border-[#27272A] bg-white dark:bg-[#18181B] px-1.5 py-0.5 text-[10px] font-medium text-black dark:text-white"
+                        >
+                          <option value="commercial">Komersial & Hook Kuat</option>
+                          <option value="storytelling">Storytelling & Empati</option>
+                          <option value="edu-viral">Edukasi Viral / Kasus Nyata</option>
+                          <option value="soft-selling">Soft Selling Elegan</option>
+                        </select>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isGeneratingConcept}
+                        onClick={handleGenerateConcept}
+                        className="py-1 px-3 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-semibold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      >
+                        {isGeneratingConcept ? (
+                          <>
+                            <div className="size-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            <span>Menyusun Konsep...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 size={12} />
+                            <span>Generate Konsep ke Brief</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {angleTab === 'write' ? (
                   <div className="space-y-1">
@@ -297,29 +439,10 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                   </div>
                 )}
               </div>
-
-              <button
-                type="button"
-                disabled={isGenerating || isUploadingImage}
-                onClick={handleGenerateStoryboard}
-                className="w-full py-2.5 px-4 rounded-xl bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <>
-                    <div className="size-3.5 border-2 border-white/40 dark:border-black/40 border-t-white dark:border-t-black rounded-full animate-spin" />
-                    <span>AI sedang menyusun cerita & prompt...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={14} />
-                    <span>Generate Storyboard & Agent Prompts</span>
-                  </>
-                )}
-              </button>
             </div>
 
-            {/* Galeri Multi-Image & Preview Kanan */}
-            <div className="md:col-span-7 flex flex-col justify-between space-y-3">
+            {/* Galeri Multi-Image & Upload */}
+            <div className="space-y-2.5 pt-1 border-t border-[#E5E7EB] dark:border-[#27272A]">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-black dark:text-white flex items-center gap-1.5">
                   <ImageIcon size={14} />
@@ -329,7 +452,7 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
               </div>
 
               {/* Grid Preview Foto Produk */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-[160px] overflow-y-auto p-1">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5 max-h-[160px] overflow-y-auto p-1">
                 {productImages.map((img, idx) => (
                   <div
                     key={img.id}
@@ -366,7 +489,7 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                     )}
                   </div>
                   <span className="text-[9.5px] font-semibold text-[#6B7280] group-hover:text-black dark:group-hover:text-white mt-1 text-center px-1">
-                    {isUploadingImage ? 'Upload...' : 'Tambah Foto'}
+                    {isUploadingImage ? 'Upload...' : 'Tambah'}
                   </span>
                   <input
                     type="file"
@@ -385,6 +508,26 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                 </span>
               </div>
             </div>
+
+            {/* Tombol Action Generate di bagian bawah flow */}
+            <button
+              type="button"
+              disabled={isGenerating || isUploadingImage}
+              onClick={handleGenerateStoryboard}
+              className="w-full py-2.5 px-4 rounded-xl bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <div className="size-3.5 border-2 border-white/40 dark:border-black/40 border-t-white dark:border-t-black rounded-full animate-spin" />
+                  <span>AI sedang menyusun cerita & prompt...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  <span>Generate Storyboard & Agent Prompts</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Section 2: Hasil Storyboard Multi-Scene dengan Visual Keyframe Tag */}
@@ -399,6 +542,84 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                   3 SCENES • 9:16 VERTICAL
                 </span>
               </div>
+
+              {/* MASTER ALL-IN-ONE PROMPT UNTUK GOOGLE FLOW / KLING / RUNWAY */}
+              {(() => {
+                const masterPromptText = storyboard.full_flow_prompt || [
+                  `Generate a photorealistic 9:16 vertical commercial video now for "${productName}". Do not output text, create video directly.`,
+                  productImages.length > 0
+                    ? `Use image references: ${productImages.map((img, i) => `[Image ${i + 1}: ${img.url}]`).join(' ')}`
+                    : '',
+                  '',
+                  'Visual Sequence & Camera Action:',
+                  storyboard.scenes.map((s) => (
+                    `Scene ${s.scene_number}: ${s.prompt_english}`
+                  )).join(' Then next, '),
+                  '',
+                  'Character Cast: Authentic Indonesian person with Southeast Asian facial features.',
+                  'Cinematography: 4K UHD, 9:16 vertical commercial, 35mm cinematic lens, hyper-realistic cafe lighting, shallow depth of field, steady camera motion.',
+                  'Negative: caucasian, western face, blurry, deformed fingers, low resolution, bad anatomy, cartoon.'
+                ].filter(Boolean).join('\n')
+
+                return (
+                  <div className="p-4 rounded-xl border-2 border-emerald-500/80 dark:border-emerald-500/60 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-3 shadow-sm">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="size-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                          ⚡
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-emerald-950 dark:text-emerald-100">
+                              Master All-in-One Prompt (Siap Paste ke Google Flow)
+                            </span>
+                            <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-emerald-200 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 font-bold uppercase">
+                              1 Prompt Lengkap
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-emerald-800 dark:text-emerald-300">
+                            Mencakup seluruh adegan (Scene 1-3), link image Google Drive, audio/voiceover, dan gaya visual. Tinggal salin & tempel!
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <a
+                          href="https://flow.google.com"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 rounded-lg text-[10.5px] font-semibold bg-white dark:bg-[#18181B] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] hover:bg-[#F3F4F6] transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <ExternalLink size={11} />
+                          <span>Buka Google Flow ↗</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(masterPromptText)
+                            setCopiedMasterFlowPrompt(true)
+                            toast.success('🚀 Master Prompt Google Flow berhasil disalin! Tinggal paste.')
+                            setTimeout(() => setCopiedMasterFlowPrompt(false), 2500)
+                          }}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                            copiedMasterFlowPrompt
+                              ? 'bg-emerald-700 text-white'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          {copiedMasterFlowPrompt ? <Check size={13} strokeWidth={3} /> : <Copy size={13} />}
+                          <span>{copiedMasterFlowPrompt ? 'Berhasil Tersalin!' : 'Copy 1 Prompt ke Google Flow'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#121214] border border-emerald-200 dark:border-emerald-800/80 font-mono text-[11px] text-black dark:text-gray-200 leading-relaxed max-h-[150px] overflow-y-auto whitespace-pre-wrap select-all">
+                      {masterPromptText}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Grid 3 Scenes */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
@@ -421,22 +642,51 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                           </span>
                         </div>
 
-                        {/* Thumbnail Preview Referensi Gambar yang Dipakai di Scene Ini */}
+                        {/* Thumbnail Preview Referensi Gambar yang Dipakai di Scene Ini & Link Google Drive Publik */}
                         {matchedImg && (
-                          <div className="flex items-center gap-2 p-1.5 rounded-lg bg-[#F9FAFB] dark:bg-[#121214] border border-[#E5E7EB] dark:border-[#27272A]">
-                            <img
-                              src={matchedImg.localPreviewUrl || matchedImg.url}
-                              alt={matchedImg.name}
-                              className="size-8 rounded-md object-cover shrink-0 border border-[#E5E7EB]"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[9.5px] font-semibold text-black dark:text-white truncate">
-                                Keyframe Ref: {scene.reference_image_used || matchedImg.name}
-                              </p>
-                              <p className="font-mono text-[8.5px] text-emerald-600 dark:text-emerald-400">
-                                Match to Image #{Math.min(idx + 1, productImages.length)}
-                              </p>
+                          <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-[#F9FAFB] dark:bg-[#121214] border border-[#E5E7EB] dark:border-[#27272A]">
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={matchedImg.localPreviewUrl || matchedImg.url}
+                                alt={matchedImg.name}
+                                className="size-9 rounded-md object-cover shrink-0 border border-[#E5E7EB] dark:border-[#27272A]"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-semibold text-black dark:text-white truncate">
+                                  {scene.reference_image_used || matchedImg.name}
+                                </p>
+                                <p className="font-mono text-[8.5px] text-emerald-600 dark:text-emerald-400">
+                                  Match Foto #{Math.min(idx + 1, productImages.length)}
+                                </p>
+                              </div>
                             </div>
+
+                            {/* Google Drive Published URL */}
+                            {matchedImg.url && (
+                              <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#E5E7EB] dark:border-[#27272A]">
+                                <a
+                                  href={matchedImg.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[9.5px] font-mono text-blue-600 dark:text-blue-400 hover:underline truncate flex items-center gap-1 min-w-0 flex-1"
+                                  title={matchedImg.url}
+                                >
+                                  <ExternalLink size={10} className="shrink-0" />
+                                  <span className="truncate">GDrive Image URL</span>
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(matchedImg.url)
+                                    toast.success('Link Google Drive foto berhasil disalin!')
+                                  }}
+                                  className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer flex items-center gap-1"
+                                >
+                                  <Copy size={9} />
+                                  <span>Salin Link</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -477,6 +727,63 @@ export function VideoPromptModal({ isOpen, onClose }: { isOpen: boolean; onClose
                   )
                 })}
               </div>
+
+              {/* Ringkasan Daftar Link Google Drive Publik yang Siap Dipakai di AI Video Platform */}
+              {productImages.length > 0 && (
+                <div className="p-3 rounded-xl border border-[#E5E7EB] dark:border-[#27272A] bg-[#F9FAFB] dark:bg-[#121214] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-black dark:text-white flex items-center gap-1.5">
+                      <ExternalLink size={12} />
+                      <span>Daftar Link Image Google Drive (Published & Akses Publik Langsung):</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allLinks = productImages.map((img, i) => `Foto ${i + 1} (${img.name}): ${img.url}`).join('\n')
+                        navigator.clipboard.writeText(allLinks)
+                        toast.success('Semua link Google Drive gambar berhasil disalin!')
+                      }}
+                      className="px-2 py-0.5 rounded text-[10px] font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1"
+                    >
+                      <Copy size={10} />
+                      <span>Salin Semua Link ({productImages.length})</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-[110px] overflow-y-auto">
+                    {productImages.map((img, i) => (
+                      <div
+                        key={img.id}
+                        className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] text-[10px]"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="font-mono font-bold text-black dark:text-white shrink-0">#{i + 1}</span>
+                          <span className="truncate font-medium text-black dark:text-white shrink-0 max-w-[120px]">{img.name}</span>
+                          <a
+                            href={img.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 dark:text-blue-400 font-mono hover:underline truncate flex-1 text-[9.5px]"
+                          >
+                            {img.url}
+                          </a>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(img.url)
+                            toast.success(`Link foto #${i + 1} tersalin!`)
+                          }}
+                          className="shrink-0 p-1 text-[#6B7280] hover:text-black dark:hover:text-white cursor-pointer"
+                          title="Salin link ini"
+                        >
+                          <Copy size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Panduan Agent & Image Prompt Reference */}
               {storyboard.agent_instructions && (

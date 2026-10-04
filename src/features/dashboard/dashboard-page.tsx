@@ -1,11 +1,15 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/shared/lib/supabase'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { SkeletonContainer } from '@/shared/components/ui/skeleton-container'
+import { useComposerStore } from '@/features/composer/store/use-composer-store'
 import { DashboardMetrics } from './components/dashboard-metrics'
 import { TodaySchedule } from './components/today-schedule'
 import { ChannelDistribution, PlatformStat } from './components/channel-distribution'
 import { RecentActivity } from './components/recent-activity'
+import { HistoryEventCalendar } from '@/features/history/components/history-event-calendar'
+import { HistoryDetailDrawer } from '@/features/history/components/history-detail-drawer'
 
 interface Metrics {
   scheduled: number
@@ -14,10 +18,14 @@ interface Metrics {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate()
+  const { setScheduledAt } = useComposerStore()
   const [metrics, setMetrics] = useState<Metrics>({ scheduled: 0, completed: 0, failed: 0 })
   const [todayPosts, setTodayPosts] = useState<any[]>([])
   const [recentLogs, setRecentLogs] = useState<any[]>([])
   const [allTargets, setAllTargets] = useState<any[]>([])
+  const [calendarTargets, setCalendarTargets] = useState<any[]>([])
+  const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
   const [connectedCount, setConnectedCount] = useState(0)
   const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d' | 'month'>('7d')
   const [loading, setLoading] = useState(true)
@@ -37,7 +45,7 @@ export function DashboardPage() {
     else if (selectedTimeframe === '30d') timeframeDate.setDate(now.getDate() - 30)
     else if (selectedTimeframe === 'month') timeframeDate.setDate(1)
 
-    const [sched, comp, fail, posts, targets, accounts, logs] = await Promise.all([
+    const [sched, comp, fail, posts, targets, accounts, logs, calTargets] = await Promise.all([
       supabase.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'SCHEDULED'),
       supabase.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'COMPLETED'),
       supabase.from('posts').select('id', { count: 'exact', head: true }).in('status', ['FAILED', 'PARTIALLY_FAILED']),
@@ -52,6 +60,9 @@ export function DashboardPage() {
       supabase.from('post_targets').select('id, platform, status, http_status_code, created_at, posts(title, content_text)')
         .order('created_at', { ascending: false })
         .limit(6),
+      supabase.from('post_targets').select('*, posts(*), connected_accounts(account_name, platform)')
+        .order('created_at', { ascending: false })
+        .limit(100),
     ])
 
     setMetrics({
@@ -61,9 +72,47 @@ export function DashboardPage() {
     })
     setTodayPosts(posts.data ?? [])
     setAllTargets(targets.data ?? [])
+    setCalendarTargets(calTargets.data ?? [])
     setConnectedCount(accounts.count ?? 0)
     setRecentLogs(logs.data ?? [])
     setLoading(false)
+  }
+
+  async function retryTarget(targetId: string) {
+    const { error } = await supabase
+      .from('post_targets')
+      .update({ status: 'PENDING', error_payload: null, polling_attempts: 0 })
+      .eq('id', targetId)
+    if (error) {
+      toast.error('Gagal me-reset target')
+    } else {
+      toast.success('Target direset ke PENDING, engine akan segera mengeksekusi ulang!')
+      loadData()
+      fetch('/api/cron/dispatcher').catch(() => {})
+    }
+  }
+
+  async function deleteTarget(targetId: string) {
+    if (!confirm('Hapus log target ini?')) return
+    const { error } = await supabase.from('post_targets').delete().eq('id', targetId)
+    if (error) {
+      toast.error('Gagal menghapus target')
+    } else {
+      toast.success('Target berhasil dihapus')
+      if (selectedTarget?.id === targetId) setSelectedTarget(null)
+      loadData()
+    }
+  }
+
+  function handleDateClickCreate(dateStr: string) {
+    // Set jam upload default (1 jam ke depan)
+    const currentHour = new Date().getHours()
+    const nextHour = String((currentHour + 1) % 24).padStart(2, '0')
+    const scheduledDateTime = `${dateStr}T${nextHour}:00`
+
+    setScheduledAt(scheduledDateTime)
+    toast.success(`Tanggal postingan disetel ke ${dateStr}. Silakan atur jam upload di Composer!`)
+    navigate('/composer')
   }
 
   useEffect(() => {
@@ -207,6 +256,43 @@ export function DashboardPage() {
           </div>
         </div>
       </SkeletonContainer>
+
+      {/* Full Width Event Calendar Section */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-black dark:text-white">
+              Kalender Jadwal & Stok Konten
+            </h2>
+            <p className="text-xs text-[#6B7280]">
+              Klik pada kotak tanggal untuk otomatis membuka Composer dengan tanggal tersebut.
+            </p>
+          </div>
+          <Link
+            to="/history"
+            className="text-xs font-semibold text-black dark:text-white hover:underline flex items-center gap-1"
+          >
+            <span>Buka Riwayat Penuh ↗</span>
+          </Link>
+        </div>
+
+        <HistoryEventCalendar
+          loading={loading}
+          targets={calendarTargets}
+          onSelectTarget={(t) => setSelectedTarget(t)}
+          onRetry={retryTarget}
+          onDelete={deleteTarget}
+          onDateClickCreate={handleDateClickCreate}
+        />
+      </div>
+
+      {/* Drawer Detail Inspeksi Konten dengan Simulator */}
+      <HistoryDetailDrawer
+        target={selectedTarget}
+        onClose={() => setSelectedTarget(null)}
+        onRetry={retryTarget}
+        onDelete={deleteTarget}
+      />
     </div>
   )
 }

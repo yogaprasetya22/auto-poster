@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/shared/lib/supabase'
-import { RefreshCw, RotateCcw } from 'lucide-react'
+import { RefreshCw, RotateCcw, Calendar as CalendarIcon, List } from 'lucide-react'
 import { toast } from 'sonner'
+import { useComposerStore } from '@/features/composer/store/use-composer-store'
 import { HistoryMetrics } from './components/history-metrics'
 import { HistoryList } from './components/history-list'
+import { HistoryEventCalendar } from './components/history-event-calendar'
 import { HistoryDetailDrawer } from './components/history-detail-drawer'
 
 export function HistoryPage() {
+  const navigate = useNavigate()
+  const { setScheduledAt } = useComposerStore()
   const [targets, setTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [dateFilter, setDateFilter] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [networkLatency, setNetworkLatency] = useState<number>(118)
   const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
 
@@ -90,6 +97,7 @@ export function HistoryPage() {
     }
   }
 
+
   async function retryAllFailed() {
     const failedIds = targets.filter((t) => t.status === 'FAILED').map((t) => t.id)
     if (failedIds.length === 0) {
@@ -127,10 +135,26 @@ export function HistoryPage() {
   }
 
   const filteredTargets = targets.filter((t) => {
-    if (filterStatus === 'ALL') return true
-    if (filterStatus === 'SUCCESS') return t.status === 'SUCCESS'
-    if (filterStatus === 'PENDING') return t.status === 'PENDING' || t.status === 'IN_PROGRESS'
-    if (filterStatus === 'FAILED') return t.status === 'FAILED'
+    // Filter status
+    let matchStatus = true
+    if (filterStatus === 'SUCCESS') matchStatus = t.status === 'SUCCESS'
+    else if (filterStatus === 'PENDING') matchStatus = t.status === 'PENDING' || t.status === 'IN_PROGRESS'
+    else if (filterStatus === 'FAILED') matchStatus = t.status === 'FAILED'
+
+    if (!matchStatus) return false
+
+    // Filter tanggal spesifik (jika dialihkan dari kalender)
+    if (dateFilter) {
+      const dateIso = t.posts?.scheduled_at || t.created_at
+      if (!dateIso) return false
+      const d = new Date(dateIso)
+      if (isNaN(d.getTime())) return false
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}` === dateFilter
+    }
+
     return true
   })
 
@@ -138,6 +162,23 @@ export function HistoryPage() {
   const pendingCount = targets.filter((t) => t.status === 'PENDING' || t.status === 'IN_PROGRESS').length
   const failedCount = targets.filter((t) => t.status === 'FAILED').length
   const successPct = targets.length > 0 ? ((successCount / targets.length) * 100).toFixed(1) : '100.0'
+
+  function handleSelectDateToListView(dateStr: string) {
+    setDateFilter(dateStr)
+    setViewMode('list')
+    toast.info(`Menampilkan detail list postingan tanggal ${dateStr}`)
+  }
+
+  function handleDateClickCreate(dateStr: string) {
+    // Format YYYY-MM-DDTHH:mm (default jam 10:00 jika belum dipilih jam)
+    const currentHour = new Date().getHours()
+    const nextHour = String((currentHour + 1) % 24).padStart(2, '0')
+    const scheduledDateTime = `${dateStr}T${nextHour}:00`
+    
+    setScheduledAt(scheduledDateTime)
+    toast.success(`Tanggal postingan disetel ke ${dateStr}. Silakan atur jam upload di Composer!`)
+    navigate('/composer')
+  }
 
   return (
     <div className="flex flex-col gap-6 w-full pb-10">
@@ -199,7 +240,7 @@ export function HistoryPage() {
         networkLatency={networkLatency}
       />
 
-      {/* Filter Tabs Navigation */}
+      {/* Filter Tabs Navigation & View Mode Toggle */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] p-2 rounded-xl shadow-xs">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -251,19 +292,99 @@ export function HistoryPage() {
           </button>
         </div>
 
-        <span className="font-mono text-[10px] text-[#6B7280]">
-          HEARTBEAT 10s ACTIVE
-        </span>
+        {/* View Mode Toggle: Event Calendar vs List Table */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46]">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('calendar')
+                setDateFilter(null)
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'calendar'
+                  ? 'bg-white dark:bg-[#18181B] text-black dark:text-white shadow-2xs'
+                  : 'text-[#6B7280] hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <CalendarIcon size={13} />
+              <span>Event Calendar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-[#18181B] text-black dark:text-white shadow-2xs'
+                  : 'text-[#6B7280] hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <List size={13} />
+              <span>Tabel List</span>
+            </button>
+          </div>
+
+          <span className="font-mono text-[10px] text-[#6B7280] hidden sm:inline-block">
+            HEARTBEAT 10s ACTIVE
+          </span>
+        </div>
       </div>
 
-      {/* Target Table Log Component */}
-      <HistoryList
-        loading={loading}
-        targets={filteredTargets}
-        onSelectTarget={(t) => setSelectedTarget(t)}
-        onRetry={retry}
-        onDelete={deleteTarget}
-      />
+      {/* Date Filter Notification Banner (jika sedang memfilter tanggal dari kalender) */}
+      {dateFilter && viewMode === 'list' && (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-xs text-purple-900 dark:text-purple-200">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Menampilkan Postingan Tanggal:</span>
+            <span className="font-mono font-bold px-2 py-0.5 rounded bg-purple-200 dark:bg-purple-900 text-purple-950 dark:text-purple-100">
+              {dateFilter}
+            </span>
+            <span className="text-[#6B7280] dark:text-[#9CA3AF] text-[11px]">
+              ({filteredTargets.length} postingan ditemukan)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('calendar')
+                setDateFilter(null)
+              }}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-[#18181B] text-black dark:text-white border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors cursor-pointer"
+            >
+              Kembali ke Kalender 
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateFilter(null)}
+              className="px-2 py-1 text-xs text-[#6B7280] hover:text-black dark:hover:text-white cursor-pointer"
+            >
+              Tampilkan Semua Tanggal 
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Render View Mode: Event Calendar vs List Table */}
+      {viewMode === 'calendar' ? (
+        <HistoryEventCalendar
+          loading={loading}
+          targets={filteredTargets}
+          onSelectTarget={(t) => setSelectedTarget(t)}
+          onRetry={retry}
+          onDelete={deleteTarget}
+          onSelectDateToListView={handleSelectDateToListView}
+          onDateClickCreate={handleDateClickCreate}
+        />
+      ) : (
+        <HistoryList
+          loading={loading}
+          targets={filteredTargets}
+          onSelectTarget={(t) => setSelectedTarget(t)}
+          onRetry={retry}
+          onDelete={deleteTarget}
+        />
+      )}
 
       {/* Drawer Detail Inspeksi Konten dengan Template Phone Simulator */}
       <HistoryDetailDrawer
