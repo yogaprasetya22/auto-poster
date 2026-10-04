@@ -64,10 +64,36 @@ export default async function handler(req, res) {
 
     const oauth2 = new google.auth.OAuth2(clientId, clientSecret);
     oauth2.setCredentials({ refresh_token: refreshToken });
+
+    // Ponytail: Auto-refresh token condition secara proaktif & retry saat terjadi network glitch
+    let accessToken = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const tokenRes = await oauth2.getAccessToken();
+        accessToken = typeof tokenRes === 'string' ? tokenRes : tokenRes?.token;
+        if (accessToken) break;
+      } catch (tokenErr) {
+        if (attempt === 3) {
+          console.warn(`[GDRIVE AUTH] Refresh token attempt ${attempt} failed:`, tokenErr.message);
+        } else {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+    }
+
+    if (accessToken) {
+      oauth2.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+    }
+
     const drive = google.drive({ version: 'v3', auth: oauth2 });
 
     const isVideo = (file.mimetype || '').startsWith('video/');
-    const folderId = await getOrCreateSubfolder(drive, rootFolderId, isVideo ? 'Videos' : 'Images');
+    let folderId = rootFolderId;
+    try {
+      folderId = await getOrCreateSubfolder(drive, rootFolderId, isVideo ? 'Videos' : 'Images');
+    } catch {
+      folderId = rootFolderId; // fallback jika subfolder gagal dibuat
+    }
 
     const driveRes = await drive.files.create({
       requestBody: { name: file.originalFilename || `media_${Date.now()}`, parents: [folderId] },
