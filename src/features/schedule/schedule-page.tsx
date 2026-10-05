@@ -10,8 +10,18 @@ import {
   Plus,
   RotateCcw,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { format } from 'date-fns'
+import { id } from 'date-fns/locale'
+import type { DateRange } from 'react-day-picker'
+import { Calendar } from '@/shared/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover'
 import { HistoryDetailDrawer } from '@/features/history/components/history-detail-drawer'
 
 // Format helper WIB (UTC+7)
@@ -54,8 +64,7 @@ export function SchedulePage() {
   const [targets, setTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
 
   async function loadSchedules(isSilent = false) {
@@ -122,6 +131,9 @@ export function SchedulePage() {
 
   // Filter status & date range
   const filteredTargets = useMemo(() => {
+    const startStr = dateRange?.from ? formatDateKey(dateRange.from.toISOString()) : null
+    const endStr = dateRange?.to ? formatDateKey(dateRange.to.toISOString()) : startStr
+
     return targets.filter((t) => {
       // 1. Status Filter
       if (filterStatus === 'PENDING' && !(t.status === 'PENDING' || t.status === 'IN_PROGRESS')) return false
@@ -132,12 +144,12 @@ export function SchedulePage() {
       const iso = t.posts?.scheduled_at || t.created_at || new Date().toISOString()
       const targetDateKey = formatDateKey(iso)
 
-      if (startDate && targetDateKey < startDate) return false
-      if (endDate && targetDateKey > endDate) return false
+      if (startStr && targetDateKey < startStr) return false
+      if (endStr && targetDateKey > endStr) return false
 
       return true
     })
-  }, [targets, filterStatus, startDate, endDate])
+  }, [targets, filterStatus, dateRange])
 
   // Group by Date & Sort by Time
   const groupedByDate = useMemo(() => {
@@ -263,39 +275,66 @@ export function SchedulePage() {
           </button>
         </div>
 
-        {/* Date Range Filter Controls */}
+        {/* Interactive Date Range Calendar Picker */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F8F9FA] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] text-xs">
-            <CalendarDays size={13} className="text-muted-foreground" />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer"
-              title="Dari Tanggal"
-            />
-            <span className="text-muted-foreground font-mono text-[11px]">—</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer"
-              title="Sampai Tanggal"
-            />
-            {(startDate || endDate) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setStartDate('')
-                  setEndDate('')
-                }}
-                className="ml-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer px-1 py-0.2 rounded hover:bg-muted"
-                title="Reset Rentang Tanggal"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+          <Popover>
+            <PopoverTrigger
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#F8F9FA] dark:bg-[#16181D] hover:bg-muted dark:hover:bg-[#202023] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] text-xs text-foreground cursor-pointer transition-colors shadow-2xs outline-none"
+              title="Pilih Rentang Tanggal"
+            >
+              <CalendarDays size={13} className="text-muted-foreground" />
+              <span className="font-medium">
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, 'd MMM yyyy', { locale: id })} – {format(dateRange.to, 'd MMM yyyy', { locale: id })}
+                    </>
+                  ) : (
+                    format(dateRange.from, 'd MMM yyyy', { locale: id })
+                  )
+                ) : (
+                  'Pilih Rentang Tanggal'
+                )}
+              </span>
+              <ChevronDown size={12} className="text-muted-foreground ml-0.5" />
+            </PopoverTrigger>
+
+            <PopoverContent align="end" className="w-auto p-3 bg-popover border border-border shadow-xl rounded-xl">
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <span className="text-xs font-semibold text-foreground">Rentang Jadwal</span>
+                  {dateRange && (
+                    <button
+                      type="button"
+                      onClick={() => setDateRange(undefined)}
+                      className="text-[11px] font-mono text-muted-foreground hover:text-foreground cursor-pointer underline"
+                    >
+                      Reset Filter
+                    </button>
+                  )}
+                </div>
+                <Calendar
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={1}
+                  locale={id}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {dateRange && (
+            <button
+              type="button"
+              onClick={() => setDateRange(undefined)}
+              className="size-7 rounded-lg bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 flex items-center justify-center cursor-pointer transition-colors text-xs"
+              title="Reset Rentang Tanggal"
+            >
+              ✕
+            </button>
+          )}
 
           <span className="text-[11px] font-mono text-[#6B7280]">
             Total {groupedByDate.length} Hari Terjadwal
