@@ -318,7 +318,8 @@ export function SchedulePage() {
                   defaultMonth={dateRange?.from}
                   selected={dateRange}
                   onSelect={setDateRange}
-                  numberOfMonths={1}
+                  numberOfMonths={2}
+                  className="rounded-lg border"
                   locale={id}
                 />
               </div>
