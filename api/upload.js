@@ -36,6 +36,96 @@ async function getOrCreateSubfolder(drive, parentId, name) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method Not Allowed' });
 
+  // Mode 1: Client meminta Resumable Upload Session URL (Payload cuma ~100 bytes, bypass Vercel 4.5MB limit)
+  const isInitResumable = req.headers['content-type']?.includes('application/json') || req.url?.includes('action=init-resumable');
+  if (isInitResumable) {
+    try {
+      let bodyData = req.body;
+      if (typeof bodyData === 'string') {
+        try { bodyData = JSON.parse(bodyData); } catch {}
+      } else if (!bodyData) {
+        // Parse raw body stream if not auto-parsed
+        const buffers = [];
+        for await (const chunk of req) { buffers.push(chunk); }
+        const raw = Buffer.concat(buffers).toString('utf8');
+        try { bodyData = JSON.parse(raw); } catch { bodyData = {}; }
+      }
+
+      const { fileName = `media_${Date.now()}`, mimeType = 'video/mp4', fileSize = 0 } = bodyData || {};
+
+      let clientId = process.env.GDRIVE_CLIENT_ID;
+      let clientSecret = process.env.GDRIVE_CLIENT_SECRET;
+      let refreshToken = process.env.GDRIVE_REFRESH_TOKEN;
+      let rootFolderId = process.env.GDRIVE_FOLDER_ID;
+
+      if (!refreshToken && fs.existsSync('gdrive_oauth.json')) {
+        try {
+          const local = JSON.parse(fs.readFileSync('gdrive_oauth.json', 'utf8'));
+          clientId = clientId || local.client_id;
+          clientSecret = clientSecret || local.client_secret;
+          refreshToken = refreshToken || local.refresh_token;
+          rootFolderId = rootFolderId || local.folder_id;
+        } catch {}
+      }
+
+      if (!clientId || !clientSecret || !refreshToken || !rootFolderId) {
+        return res.status(500).json({ success: false, error: 'GDrive credentials missing' });
+      }
+
+      const oauth2 = new google.auth.OAuth2(clientId, clientSecret);
+      oauth2.setCredentials({ refresh_token: refreshToken });
+      const tokenRes = await oauth2.getAccessToken();
+      const accessToken = typeof tokenRes === 'string' ? tokenRes : tokenRes?.token;
+
+      const drive = google.drive({ version: 'v3', auth: oauth2 });
+      const isVideo = (mimeType || '').startsWith('video/');
+      let folderId = rootFolderId;
+      try {
+        folderId = await getOrCreateSubfolder(drive, rootFolderId, isVideo ? 'Videos' : 'Images');
+      } catch {
+        folderId = rootFolderId;
+      }
+
+      // Request Resumable Session URL directly from Google Drive API
+      const metadata = {
+        name: fileName,
+        parents: [folderId],
+      };
+
+      const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+          'X-Upload-Content-Type': mimeType,
+          'X-Upload-Content-Length': String(fileSize || 0),
+        },
+        body: JSON.stringify(metadata),
+      });
+
+      if (!initRes.ok) {
+        const errText = await initRes.text();
+        return res.status(initRes.status).json({ success: false, error: `Google API init failed: ${errText}` });
+      }
+
+      const uploadUrl = initRes.headers.get('location');
+      if (!uploadUrl) {
+        return res.status(500).json({ success: false, error: 'Google did not return upload location' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        resumable: true,
+        uploadUrl,
+        accessToken,
+      });
+    } catch (err) {
+      console.error('Init Resumable Error:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // Mode 2: Direct Multipart Form Upload (Fallback untuk file kecil / dev lokal)
   try {
     const form = formidable({ keepExtensions: true, maxFileSize: 100 * 1024 * 1024 });
     const [, files] = await form.parse(req);
