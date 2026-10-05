@@ -54,6 +54,8 @@ export function SchedulePage() {
   const [targets, setTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
   const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
 
   async function loadSchedules(isSilent = false) {
@@ -118,16 +120,24 @@ export function SchedulePage() {
     }
   }
 
-  // Filter status
+  // Filter status & date range
   const filteredTargets = useMemo(() => {
     return targets.filter((t) => {
-      if (filterStatus === 'ALL') return true
-      if (filterStatus === 'PENDING') return t.status === 'PENDING' || t.status === 'IN_PROGRESS'
-      if (filterStatus === 'SUCCESS') return t.status === 'SUCCESS'
-      if (filterStatus === 'FAILED') return t.status === 'FAILED'
+      // 1. Status Filter
+      if (filterStatus === 'PENDING' && !(t.status === 'PENDING' || t.status === 'IN_PROGRESS')) return false
+      if (filterStatus === 'SUCCESS' && t.status !== 'SUCCESS') return false
+      if (filterStatus === 'FAILED' && t.status !== 'FAILED') return false
+
+      // 2. Date Range Filter (WIB YYYY-MM-DD)
+      const iso = t.posts?.scheduled_at || t.created_at || new Date().toISOString()
+      const targetDateKey = formatDateKey(iso)
+
+      if (startDate && targetDateKey < startDate) return false
+      if (endDate && targetDateKey > endDate) return false
+
       return true
     })
-  }, [targets, filterStatus])
+  }, [targets, filterStatus, startDate, endDate])
 
   // Group by Date & Sort by Time
   const groupedByDate = useMemo(() => {
@@ -253,9 +263,44 @@ export function SchedulePage() {
           </button>
         </div>
 
-        <span className="text-[11px] font-mono text-[#6B7280]">
-          Total {groupedByDate.length} Hari Terjadwal
-        </span>
+        {/* Date Range Filter Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F8F9FA] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] text-xs">
+            <CalendarDays size={13} className="text-muted-foreground" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer"
+              title="Dari Tanggal"
+            />
+            <span className="text-muted-foreground font-mono text-[11px]">—</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer"
+              title="Sampai Tanggal"
+            />
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('')
+                  setEndDate('')
+                }}
+                className="ml-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer px-1 py-0.2 rounded hover:bg-muted"
+                title="Reset Rentang Tanggal"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <span className="text-[11px] font-mono text-[#6B7280]">
+            Total {groupedByDate.length} Hari Terjadwal
+          </span>
+        </div>
       </div>
 
       {/* Main Content Area */}
