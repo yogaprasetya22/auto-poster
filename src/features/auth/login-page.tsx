@@ -36,7 +36,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center bg-[#F9FAFB] dark:bg-[#09090B] p-4 text-foreground selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+    <main className="min-h-screen w-full flex flex-col justify-center items-center bg-[#F9FAFB] dark:bg-[#09090B] p-4 text-foreground selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
       <div className="w-full max-w-[400px] flex flex-col gap-6">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center gap-2">
@@ -47,7 +47,7 @@ export function LoginPage() {
             <h1 className="text-xl font-bold tracking-tight text-black dark:text-white">
               Masuk ke Engine Auto-Poster
             </h1>
-            <p className="text-xs text-[#6B7280] dark:text-[#A1A1AA] mt-1">
+            <p className="text-xs text-[#4B5563] dark:text-[#A1A1AA] mt-1 font-medium">
               Autonomous Omnichannel Social Media Auto-Poster
             </p>
           </div>
@@ -59,7 +59,7 @@ export function LoginPage() {
             {/* Email Field */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="login-email" className="text-xs font-semibold text-black dark:text-gray-200 flex items-center gap-1.5">
-                <Mail size={13} className="text-[#6B7280]" />
+                <Mail size={13} className="text-[#4B5563] dark:text-[#A1A1AA]" />
                 <span>Alamat Email</span>
               </label>
               <input
@@ -71,14 +71,14 @@ export function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nama@perusahaan.com"
                 required
-                className="w-full bg-[#F9FAFB] dark:bg-[#202023] border border-[#E5E7EB] dark:border-[#27272A] px-3.5 py-2.5 rounded-xl text-xs text-black dark:text-white placeholder:text-[#9CA3AF] focus:outline-none focus:border-black dark:focus:border-white transition-all"
+                className="w-full bg-[#F9FAFB] dark:bg-[#202023] border border-[#E5E7EB] dark:border-[#27272A] px-3.5 py-2.5 rounded-xl text-xs text-black dark:text-white placeholder:text-[#6B7280] focus:outline-none focus:border-black dark:focus:border-white transition-all"
               />
             </div>
 
             {/* Password Field */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="login-password" className="text-xs font-semibold text-black dark:text-gray-200 flex items-center gap-1.5">
-                <Lock size={13} className="text-[#6B7280]" />
+                <Lock size={13} className="text-[#4B5563] dark:text-[#A1A1AA]" />
                 <span>Kata Sandi</span>
               </label>
               <input
@@ -91,7 +91,7 @@ export function LoginPage() {
                 placeholder="••••••••••••"
                 required
                 minLength={6}
-                className="w-full bg-[#F9FAFB] dark:bg-[#202023] border border-[#E5E7EB] dark:border-[#27272A] px-3.5 py-2.5 rounded-xl text-xs text-black dark:text-white placeholder:text-[#9CA3AF] focus:outline-none focus:border-black dark:focus:border-white transition-all"
+                className="w-full bg-[#F9FAFB] dark:bg-[#202023] border border-[#E5E7EB] dark:border-[#27272A] px-3.5 py-2.5 rounded-xl text-xs text-black dark:text-white placeholder:text-[#6B7280] focus:outline-none focus:border-black dark:focus:border-white transition-all"
               />
             </div>
 
@@ -114,17 +114,17 @@ export function LoginPage() {
         </div>
 
         {/* Security / Info Badge */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#6B7280]">
-          <ShieldCheck size={13} className="text-emerald-600" />
+        <div className="flex items-center justify-center gap-1.5 text-xs text-[#374151] dark:text-[#D1D5DB]">
+          <ShieldCheck size={14} className="text-emerald-700 dark:text-emerald-400" />
           <span>Otentikasi aman ditenagai oleh Supabase Auth</span>
         </div>
 
-        <div className="flex items-center justify-center gap-3 text-[11px] text-[#9CA3AF]">
-          <Link to="/terms" className="hover:underline">Syarat Layanan</Link>
+        <div className="flex items-center justify-center gap-3 text-xs text-[#4B5563] dark:text-[#9CA3AF]">
+          <Link to="/terms" className="hover:underline font-medium">Syarat Layanan</Link>
           <span>•</span>
-          <Link to="/privacy" className="hover:underline">Kebijakan Privasi</Link>
+          <Link to="/privacy" className="hover:underline font-medium">Kebijakan Privasi</Link>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
