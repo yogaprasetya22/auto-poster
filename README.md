@@ -51,6 +51,9 @@ META_REDIRECT_URI=https://auto-poster-blush.vercel.app/api/auth/meta-callback
 TIKTOK_CLIENT_KEY=awxxxxxx
 TIKTOK_CLIENT_SECRET=xxxxxx
 TIKTOK_REDIRECT_URI=https://auto-poster-blush.vercel.app/api/auth/tiktok-callback
+
+# --- GOOGLE GEMINI AI ---
+GEMINI_API_KEY=AIzaSy...
 ```
 
 ---
@@ -218,7 +221,28 @@ Aplikasi ini otomatis meminta permissions berikut saat tombol koneksi di klik:
 
 ---
 
-## 6. Setup Scheduler Otomatis (cron-job.org)
+## 6. Setup Google Gemini AI (`GEMINI_API_KEY`)
+
+Aplikasi memanfaatkan Google Gemini AI (model `gemini-1.5-flash` / `gemini-1.5-pro`) untuk fitur **Autopilot Composer**:
+- Generate konsep konten video viral (`/api/ai/concept-generator`)
+- Generate prompt naskah video cinematic (`/api/ai/video-prompt`)
+- Generate caption, hook, CTA, dan hashtag multi-channel (`/api/ai/caption`)
+
+### Cara Mendapatkan API Key Gemini:
+1. Buka [Google AI Studio](https://aistudio.google.com/).
+2. Login menggunakan akun Google kamu.
+3. Klik tombol **Get API key** di pojok kiri atas.
+4. Klik **Create API key in new project** (atau pilih project Google Cloud yang sudah ada).
+5. Salin API Key yang dihasilkan (diawali dengan `AIzaSy...`).
+6. Masukkan ke file `.env` lokal:
+   ```env
+   GEMINI_API_KEY=AIzaSy...
+   ```
+7. Masukkan juga ke **Environment Variables di Vercel Dashboard** untuk environment Production & Preview.
+
+---
+
+## 7. Setup Scheduler Otomatis (cron-job.org)
 
 Karena Vercel Hobby Plan membatasi cron jobs internal, aplikasi menggunakan layanan eksternal gratis yang lebih fleksibel: [cron-job.org](https://console.cron-job.org/).
 
@@ -236,7 +260,7 @@ Karena Vercel Hobby Plan membatasi cron jobs internal, aplikasi menggunakan laya
 
 ---
 
-## 7. Checklist Deployment Production (Vercel)
+## 8. Checklist Deployment Production (Vercel)
 
 1. **Environment Variables di Vercel**:
    - Masuk ke **Vercel Dashboard** > Pilih Proyek `auto-poster` > **Settings** > **Environment Variables**.
