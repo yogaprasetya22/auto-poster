@@ -4,7 +4,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { ConnectPlatformModal } from './components/connect-platform-modal'
 import { toast } from 'sonner'
 import { SkeletonContainer } from '@/shared/components/ui/skeleton-container'
-import { Edit3, Plus, Trash2, X, Check, Loader2, Sparkles, Eye, Code, FileText } from 'lucide-react'
+import { Edit3, Plus, Trash2, X, Check, Loader2, Sparkles, Eye, Code, FileText, AlertTriangle } from 'lucide-react'
 import {
   Drawer,
   DrawerContent,
@@ -603,6 +603,7 @@ export function SettingsPage() {
             {SUPPORTED_PLATFORMS.map((platform) => {
               const connected = accounts.filter((a) => a.platform === platform.key)
               const isConnected = connected.length > 0
+              const hasExpired = connected.some((a) => a.token_expires_at && new Date(a.token_expires_at).getTime() < Date.now())
 
               return (
                 <div
@@ -615,8 +616,14 @@ export function SettingsPage() {
                         <span className="material-symbols-outlined text-[24px] text-black">{platform.iconName}</span>
                       </div>
                       {isConnected && (
-                        <span className="absolute -bottom-1 -right-1 size-4 rounded-full bg-black flex items-center justify-center text-white">
-                          <span className="material-symbols-outlined text-[10px]">check</span>
+                        <span className={`absolute -bottom-1 -right-1 size-4 rounded-full flex items-center justify-center text-white ${
+                          hasExpired ? 'bg-amber-500' : 'bg-emerald-600'
+                        }`}>
+                          {hasExpired ? (
+                            <AlertTriangle size={10} strokeWidth={2.5} />
+                          ) : (
+                            <Check size={10} strokeWidth={3} />
+                          )}
                         </span>
                       )}
                     </div>
@@ -637,12 +644,24 @@ export function SettingsPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                          isConnected
-                            ? 'bg-[#F3F4F6] border-[#E5E7EB] text-black'
-                            : 'bg-white border-[#E5E7EB] text-[#6B7280]'
+                          !isConnected
+                            ? 'bg-white border-[#E5E7EB] text-[#6B7280]'
+                            : hasExpired
+                            ? 'bg-amber-50 border-amber-200 text-amber-700'
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                         }`}>
-                          <span className={`size-1.5 rounded-full ${isConnected ? 'bg-black' : 'bg-transparent border border-black'}`}></span>
-                          {isConnected ? `${connected.length} Akun Terhubung & Aktif` : 'Membutuhkan Autentikasi'}
+                          <span className={`size-1.5 rounded-full ${
+                            !isConnected
+                              ? 'bg-transparent border border-black'
+                              : hasExpired
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-600'
+                          }`}></span>
+                          {!isConnected
+                            ? 'Membutuhkan Autentikasi'
+                            : hasExpired
+                            ? 'Token Kedaluwarsa (Perlu Login Ulang)'
+                            : `${connected.length} Akun Terhubung & Aktif`}
                         </span>
                         <span className="text-xs text-[#6B7280] hidden sm:inline">
                           • {platform.capabilities}
@@ -654,24 +673,25 @@ export function SettingsPage() {
                   <div className="flex items-center gap-2 self-end lg:self-center shrink-0">
                     {isConnected ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        {platform.key === 'tiktok' && (
+                        {/* Tombol Reconnect HANYA tampil jika token benar-benar expired */}
+                        {hasExpired && platform.key === 'tiktok' && (
                           <button
                             type="button"
                             onClick={() => { window.location.href = '/api/auth/tiktok-login' }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-medium hover:bg-[#262626] transition-colors cursor-pointer shadow-2xs"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition-colors cursor-pointer shadow-2xs"
                           >
                             <span className="material-symbols-outlined text-[14px]">sync</span>
-                            <span>Reconnect TikTok (1-Click OAuth)</span>
+                            <span>Login Ulang TikTok</span>
                           </button>
                         )}
-                        {platform.key === 'instagram' && (
+                        {hasExpired && platform.key === 'instagram' && (
                           <button
                             type="button"
                             onClick={handleMetaConnect}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-medium hover:bg-[#262626] transition-colors cursor-pointer shadow-2xs"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition-colors cursor-pointer shadow-2xs"
                           >
                             <span className="material-symbols-outlined text-[14px]">sync</span>
-                            <span>Reconnect Meta</span>
+                            <span>Login Ulang Meta</span>
                           </button>
                         )}
                         {connected.map((c) => (
@@ -773,9 +793,9 @@ export function SettingsPage() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-[11px] text-[#4B5563] leading-relaxed line-clamp-3">
-                    {item.content}
-                  </p>
+                  <div className="text-[11px] text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed max-h-28 overflow-hidden pointer-events-none">
+                    {renderCleanMarkdown(item.content)}
+                  </div>
                 </div>
               ))}
             </div>

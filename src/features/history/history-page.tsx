@@ -19,6 +19,10 @@ export function HistoryPage() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [networkLatency, setNetworkLatency] = useState<number>(118)
   const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
+  const [page, setPage] = useState<number>(0)
+  const [hasMore, setHasMore] = useState<boolean>(true)
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false)
+  const PAGE_SIZE = 10
 
   async function loadData(isSilent = false) {
     if (!isSilent) setLoading(true)
@@ -27,11 +31,38 @@ export function HistoryPage() {
       .from('post_targets')
       .select('*, posts(*), connected_accounts(account_name, platform)')
       .order('updated_at', { ascending: false })
-      .limit(100)
+      .range(0, PAGE_SIZE - 1)
     const elapsed = Math.round(performance.now() - tStart)
     setNetworkLatency(elapsed > 0 ? elapsed : 118)
-    if (data) setTargets(data)
+    if (data) {
+      setTargets(data)
+      setPage(0)
+      setHasMore(data.length >= PAGE_SIZE)
+    }
     if (!isSilent) setLoading(false)
+  }
+
+  async function loadMoreTargets() {
+    if (isLoadingMore || !hasMore) return
+    setIsLoadingMore(true)
+    const nextPage = page + 1
+    const from = nextPage * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+
+    const { data } = await supabase
+      .from('post_targets')
+      .select('*, posts(*), connected_accounts(account_name, platform)')
+      .order('updated_at', { ascending: false })
+      .range(from, to)
+
+    if (data && data.length > 0) {
+      setTargets((prev) => [...prev, ...data])
+      setPage(nextPage)
+      setHasMore(data.length >= PAGE_SIZE)
+    } else {
+      setHasMore(false)
+    }
+    setIsLoadingMore(false)
   }
 
   useEffect(() => {
@@ -383,6 +414,9 @@ export function HistoryPage() {
           onSelectTarget={(t) => setSelectedTarget(t)}
           onRetry={retry}
           onDelete={deleteTarget}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={loadMoreTargets}
         />
       )}
 

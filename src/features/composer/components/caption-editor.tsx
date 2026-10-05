@@ -83,7 +83,7 @@ export function CaptionEditor() {
           ) : (
             <Sparkles className="size-3 text-amber-300" />
           )}
-          <span>{isGenerating ? 'AI Menulis...' : '✨ Magic AI Caption'}</span>
+          <span>{isGenerating ? 'AI Menulis...' : 'Magic AI Caption'}</span>
         </button>
       </div>
 
