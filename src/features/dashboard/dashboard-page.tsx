@@ -30,8 +30,8 @@ export function DashboardPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d' | 'month'>('7d')
   const [loading, setLoading] = useState(true)
 
-  async function loadData() {
-    setLoading(true)
+  async function loadData(isSilent = false) {
+    if (!isSilent) setLoading(true)
     const now = new Date()
     const today = new Date(now)
     today.setHours(0, 0, 0, 0)
@@ -87,7 +87,7 @@ export function DashboardPage() {
     setCalendarTargets(calTargets.data ?? [])
     setConnectedCount(accounts.count ?? 0)
     setRecentLogs(logs.data ?? [])
-    setLoading(false)
+    if (!isSilent) setLoading(false)
   }
 
   async function retryTarget(targetId: string) {
@@ -99,7 +99,7 @@ export function DashboardPage() {
       toast.error('Gagal me-reset target')
     } else {
       toast.success('Target direset ke PENDING, engine akan segera mengeksekusi ulang!')
-      loadData()
+      loadData(true)
       fetch('/api/cron/dispatcher').catch(() => {})
     }
   }
@@ -112,7 +112,7 @@ export function DashboardPage() {
     } else {
       toast.success('Target berhasil dihapus')
       if (selectedTarget?.id === targetId) setSelectedTarget(null)
-      loadData()
+      loadData(true)
     }
   }
 
@@ -128,23 +128,26 @@ export function DashboardPage() {
   }
 
   useEffect(() => {
-    loadData()
+    loadData(false)
 
-    // Supabase Realtime channel subscription (Zero-overhead, instant live CDC)
+    // Supabase Realtime channel subscription dengan debounce dan background reload (tanpa trigger skeleton)
+    let debounceTimer: any = null
+    const handleRealtimeChange = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        loadData(true)
+      }, 500)
+    }
+
     const channel = supabase
       .channel('dashboard_realtime_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-        loadData()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_targets' }, () => {
-        loadData()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'connected_accounts' }, () => {
-        loadData()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, handleRealtimeChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_targets' }, handleRealtimeChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'connected_accounts' }, handleRealtimeChange)
       .subscribe()
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
       supabase.removeChannel(channel)
     }
   }, [selectedTimeframe])
@@ -216,7 +219,7 @@ export function DashboardPage() {
 
           <button
             type="button"
-            onClick={loadData}
+            onClick={() => loadData(false)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] text-[#374151] dark:text-gray-300 hover:text-black dark:hover:text-white hover:border-black dark:hover:border-white transition-all shadow-xs text-xs font-medium cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">refresh</span>
