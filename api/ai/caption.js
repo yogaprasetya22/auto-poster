@@ -1,4 +1,4 @@
-import { getDynamicKnowledgeContext } from './knowledge.js';
+import { getDynamicKnowledgeContext } from '../../server/ai/knowledge.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
