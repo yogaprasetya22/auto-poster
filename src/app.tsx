@@ -25,12 +25,14 @@ function PageLoadingFallback() {
     </div>
   )
 }
+import { ThemeProvider } from '@/shared/components/theme-provider'
 
 export function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Toaster richColors position="top-right" />
+    <ThemeProvider defaultTheme="system" storageKey="osm-ape-theme">
+      <BrowserRouter>
+        <AuthProvider>
+          <Toaster richColors position="top-right" />
         <Suspense fallback={<PageLoadingFallback />}>
           <Routes>
             {/* Public Routes */}
@@ -52,5 +54,6 @@ export function App() {
         </Suspense>
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

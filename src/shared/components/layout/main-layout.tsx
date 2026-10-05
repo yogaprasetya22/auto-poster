@@ -6,6 +6,7 @@ import {
   SidebarTrigger,
 } from '@/shared/components/ui/sidebar'
 import { Separator } from '@/shared/components/ui/separator'
+import { ThemeToggle } from '@/shared/components/theme-toggle'
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard Overview',
@@ -34,6 +35,7 @@ export function MainLayout() {
               <span className="size-1.5 rounded-full bg-emerald-500"></span>
               API READY
             </span>
+            <ThemeToggle />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
