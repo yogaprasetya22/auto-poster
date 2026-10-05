@@ -342,12 +342,20 @@ export function SchedulePage() {
                     DayButton: ({ children, modifiers, day, ...props }) => {
                       const dateKey = formatDateKey(day.date.toISOString())
                       const count = dateTargetCountMap.get(dateKey) || 0
+                      const isRangeEndpoint =
+                        Boolean(modifiers.range_start || modifiers.range_end || (modifiers.selected && !modifiers.range_middle))
 
                       return (
                         <CalendarDayButton day={day} modifiers={modifiers} {...props}>
                           <span className="text-xs font-medium leading-none">{children}</span>
                           {!modifiers.outside && count > 0 && (
-                            <span className="text-[9px] font-mono font-bold leading-none px-1 py-0.5 rounded-full bg-black/10 dark:bg-white/20 text-foreground dark:text-white group-data-[selected-single=true]/day:bg-white/30 group-data-[range-start=true]/day:bg-white/30 group-data-[range-end=true]/day:bg-white/30">
+                            <span
+                              className={`text-[9px] font-mono font-bold leading-none px-1 py-0.5 rounded-full ${
+                                isRangeEndpoint
+                                  ? 'bg-white/20 text-white dark:bg-black/20 dark:text-black'
+                                  : 'bg-black/10 dark:bg-white/20 text-foreground dark:text-white'
+                              }`}
+                            >
                               {count}p
                             </span>
                           )}
