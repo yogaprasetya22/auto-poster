@@ -1,0 +1,28 @@
+{
+  "$schema": "https://ard.org/schemas/ai-catalog-v1.json",
+  "name": "OSM-APE Auto-Poster Engine",
+  "description": "Autonomous Omnichannel Social Media Auto-Poster untuk distribusi konten video & gambar ke TikTok, Instagram, dan Facebook.",
+  "version": "1.0.0",
+  "provider": {
+    "name": "OSM-APE",
+    "url": "https://auto-poster-blush.vercel.app"
+  },
+  "endpoints": [
+    {
+      "name": "Cron Dispatcher",
+      "path": "/api/cron/dispatcher",
+      "method": "GET",
+      "description": "Trigger antrean eksekusi penerbitan konten terjadwal"
+    },
+    {
+      "name": "Media Upload",
+      "path": "/api/upload",
+      "method": "POST",
+      "description": "Upload file video/gambar ke Google Drive transit engine"
+    }
+  ],
+  "links": {
+    "documentation": "https://auto-poster-blush.vercel.app/terms",
+    "privacy": "https://auto-poster-blush.vercel.app/privacy"
+  }
+}

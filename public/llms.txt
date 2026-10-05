@@ -1,0 +1,16 @@
+# OSM-APE (Autonomous Social Media Auto-Poster Engine)
+
+> Platform otomatisasi publikasi konten media sosial (TikTok, Instagram Reels, Facebook, Threads) terintegrasi dengan Google Drive dan AI Creative Engine.
+
+## Fitur Utama
+
+- **Autonomous Scheduler:** Penjadwalan postingan otomatis berbasis antrian dan cron worker.
+- **Multi-Platform Dispatcher:** Integrasi resmi Meta Graph API dan TikTok Content Posting API.
+- **AI Content Generator:** Pembuat naskah caption, hashtag, brief konsep, dan storyboard dengan Gemini AI.
+- **Google Drive Transit Engine:** Penyimpanan dan proxy media otomatis dengan dukungan HTTP 206 Partial Content.
+
+## Tautan Resmi
+
+- [Halaman Masuk (Login)](https://auto-poster-blush.vercel.app/login)
+- [Syarat Layanan (Terms of Service)](https://auto-poster-blush.vercel.app/terms)
+- [Kebijakan Privasi (Privacy Policy)](https://auto-poster-blush.vercel.app/privacy)

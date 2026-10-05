@@ -58,12 +58,15 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Email Field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-black dark:text-gray-200 flex items-center gap-1.5">
+              <label htmlFor="login-email" className="text-xs font-semibold text-black dark:text-gray-200 flex items-center gap-1.5">
                 <Mail size={13} className="text-[#6B7280]" />
                 <span>Alamat Email</span>
               </label>
               <input
+                id="login-email"
                 type="email"
+                name="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nama@perusahaan.com"
@@ -74,12 +77,15 @@ export function LoginPage() {
 
             {/* Password Field */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-black dark:text-gray-200 flex items-center gap-1.5">
+              <label htmlFor="login-password" className="text-xs font-semibold text-black dark:text-gray-200 flex items-center gap-1.5">
                 <Lock size={13} className="text-[#6B7280]" />
                 <span>Kata Sandi</span>
               </label>
               <input
+                id="login-password"
                 type="password"
+                name="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
