@@ -23,30 +23,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="p-3 border-b border-border/60">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="hover:bg-muted data-[state=open]:bg-muted transition-colors rounded-md"
+              className="hover:bg-muted data-[state=open]:bg-muted transition-colors rounded-xl px-2.5 h-12"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded bg-black text-white dark:bg-white dark:text-black font-mono font-bold text-xs shadow-sm">
+              <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black font-mono font-bold text-sm shadow-xs">
                 OS
               </div>
-              <div className="grid flex-1 text-left text-xs leading-tight">
-                <span className="truncate font-semibold tracking-tight text-foreground">OSM-APE</span>
-                <span className="truncate text-[10px] text-muted-foreground font-mono">ENGINE v2.4</span>
+              <div className="grid flex-1 text-left text-xs leading-tight ml-1">
+                <span className="truncate font-bold tracking-tight text-foreground text-sm">OSM-APE</span>
+                <span className="truncate text-[10px] text-muted-foreground font-mono">AUTONOMOUS ENGINE</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2">
         <NavMain />
       </SidebarContent>
 
-      <SidebarFooter className="flex flex-col gap-2 p-2">
+      <SidebarFooter className="flex flex-col gap-2.5 p-3 border-t border-border/60">
         {/* User Profile & Logout */}
         {user && (
           <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card text-xs group-data-[collapsible=icon]:hidden">
