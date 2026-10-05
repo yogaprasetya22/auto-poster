@@ -1,8 +1,5 @@
 {
   "cleanUrls": false,
-  "crons": [
-    { "path": "/api/cron/dispatcher", "schedule": "* * * * *" }
-  ],
   "rewrites": [
     { "source": "/tiktoknHtwOvb6UIzVzqtJ0jcpQUhunhpHwOLA.txt", "destination": "/tiktoknHtwOvb6UIzVzqtJ0jcpQUhunhpHwOLA.txt" },
     { "source": "/api/:match*", "destination": "/api/:match*" },
