@@ -16,7 +16,7 @@ export const config = { maxDuration: 10 };
 
 export default async function handler(req, res) {
   const isDev = process.env.NODE_ENV !== 'production';
-  const cronKey = (process.env.CRON_SECRET_KEY || '').trim();
+  const cronKey = (process.env.CRON_SECRET_KEY || process.env.CRON_SECRET || '').trim();
   const urlMatches = req.url ? req.url.match(/[?&]key=([^&#]+)/) : null;
   const rawKeyFromUrl = urlMatches ? decodeURIComponent(urlMatches[1]).trim() : '';
   const queryKey = (req.query?.key || rawKeyFromUrl).trim();
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
   }
 
   const start = Date.now();
+  let processed = 0, polled = 0; // ponytail: diagnostic counters
   try {
     // Failsafe GC: sapu video usang (>1 jam) di bucket transit
     sweepOrphanedTransitVideos();
@@ -43,12 +44,13 @@ export default async function handler(req, res) {
       for (const t of active) {
         if (Date.now() - start > 7000) break; // time budget guard
         await pollTarget(t);
+        polled++;
       }
     }
 
     // Phase 2 hanya jalan kalau masih ada time budget
     if (Date.now() - start > 7000) {
-      return res.status(200).json({ success: true, durationMs: Date.now() - start, skipped: 'phase2_time_budget' });
+      return res.status(200).json({ success: true, durationMs: Date.now() - start, polled, skipped: 'phase2_time_budget' });
     }
 
     const { data: pendingTargets } = await supabase
@@ -65,6 +67,7 @@ export default async function handler(req, res) {
           touchedPostIds.add(t.posts.id);
           await supabase.from('posts').update({ status: 'PROCESSING' }).eq('id', t.posts.id);
           await initTarget(t.posts, t);
+          processed++;
           await sleep(500); // ponytail: 2s terlalu boros, 500ms cukup
         }
       }
@@ -87,6 +90,7 @@ export default async function handler(req, res) {
         for (const t of post.post_targets) {
           if (t.status === 'PENDING') {
             await initTarget(post, t);
+            processed++;
               await sleep(500);
           }
         }
@@ -95,7 +99,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ success: true, durationMs: Date.now() - start });
+    return res.status(200).json({ success: true, durationMs: Date.now() - start, polled, processed });
   } catch (err) {
     console.error('Dispatcher error:', err);
     return res.status(500).json({ success: false, error: err.message });
@@ -341,10 +345,7 @@ async function initFacebook(post, target, token, mediaUrl) {
 }
 
 async function initTarget(post, target) {
-  const token = await getValidToken(target.connected_accounts);
-  const mediaUrl = post.gdrive_lh3_url || post.gdrive_stream_url;
-  const localFilePath = resolveLocalMedia(post, mediaUrl);
-
+  // ── Simulation check FIRST — no token/media needed ──
   const isSimulation = Boolean(post.media_metadata?.is_simulation || process.env.DISPATCHER_DRY_RUN === 'true');
   if (isSimulation) {
     logTag(target, 'info', `Simulating SUCCESS (Dry-Run Mode)`);
@@ -361,6 +362,11 @@ async function initTarget(post, target) {
     }).eq('id', target.id);
     return;
   }
+
+  // ── Real post: resolve token & media ──
+  const token = await getValidToken(target.connected_accounts);
+  const mediaUrl = post.gdrive_lh3_url || post.gdrive_stream_url;
+  const localFilePath = resolveLocalMedia(post, mediaUrl);
 
   try {
     if (target.platform === 'instagram') {
