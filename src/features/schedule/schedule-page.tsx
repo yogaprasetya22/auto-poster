@@ -166,7 +166,7 @@ export function SchedulePage() {
   const failedCount = targets.filter((t) => t.status === 'FAILED').length
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-16 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 w-full pb-10">
       {/* Top Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[#27272A]">
         <div className="flex flex-col gap-0.5">
