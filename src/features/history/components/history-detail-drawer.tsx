@@ -98,7 +98,15 @@ export function HistoryDetailDrawer({
               >
                 <AlertCircle className="size-4 shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-0.5">
-                  <span className="font-bold uppercase tracking-wide">Status: {target.status}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold uppercase tracking-wide">Status: {target.status}</span>
+                    {Boolean(target.posts?.media_metadata?.is_simulation) && (
+                      <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 tracking-wider">
+                        <span className="size-1 rounded-full bg-amber-500 animate-pulse" />
+                        SIMULASI (DRY-RUN)
+                      </span>
+                    )}
+                  </div>
                   {target.error_payload ? (
                     <span className="font-mono text-[11px] break-all">
                       {(() => {
@@ -109,7 +117,11 @@ export function HistoryDetailDrawer({
                       })()}
                     </span>
                   ) : (
-                    <span>Postingan dijadwalkan untuk akun @{accountName}</span>
+                    <span>
+                      {Boolean(target.posts?.media_metadata?.is_simulation)
+                        ? `Postingan simulasi (dry-run) untuk akun @${accountName}. Aman tidak diposting ke feed live.`
+                        : `Postingan dijadwalkan untuk akun @${accountName}`}
+                    </span>
                   )}
                 </div>
               </div>

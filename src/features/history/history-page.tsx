@@ -180,7 +180,9 @@ export function HistoryPage() {
     }
   }
 
-  const filteredTargets = targets.filter((t) => {
+  const targetsToFilter = dateFilter ? (calendarTargets.length > 0 ? calendarTargets : targets) : targets
+
+  const filteredTargets = targetsToFilter.filter((t) => {
     // Filter status
     let matchStatus = true
     if (filterStatus === 'SUCCESS') matchStatus = t.status === 'SUCCESS'
@@ -221,7 +223,7 @@ export function HistoryPage() {
   function handleSelectDateToListView(dateStr: string) {
     setDateFilter(dateStr)
     setViewMode('list')
-    toast.info(`Menampilkan detail list postingan tanggal ${dateStr}`)
+    toast.info(`Menampilkan isi tabel postingan tanggal ${dateStr}`)
   }
 
   function handleDateClickCreate(dateStr: string) {

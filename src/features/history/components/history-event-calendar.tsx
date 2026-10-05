@@ -36,6 +36,7 @@ export function HistoryEventCalendar({
   loading,
   targets,
   onSelectTarget,
+  onSelectDateToListView,
   onDateClickCreate,
 }: HistoryEventCalendarProps) {
   const [view, setView] = useState<CalendarView>('month')
@@ -112,6 +113,13 @@ export function HistoryEventCalendar({
           {occurrence.event.title}
         </span>
 
+        {/* Simulation indicator */}
+        {Boolean(t?.posts?.media_metadata?.is_simulation) && (
+          <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 shrink-0">
+            SIM
+          </span>
+        )}
+
         {/* Time tag badge */}
         <span className="text-[10px] text-slate-500 dark:text-zinc-400 shrink-0 font-medium ml-0.5">
           {timeStr}
@@ -140,8 +148,14 @@ export function HistoryEventCalendar({
               }
             }}
             onSlotClick={(slot) => {
-              if (onDateClickCreate) {
-                const dateStr = slot.date.toISOString().split('T')[0]
+              const d = slot.date
+              const y = d.getFullYear()
+              const m = String(d.getMonth() + 1).padStart(2, '0')
+              const day = String(d.getDate()).padStart(2, '0')
+              const dateStr = `${y}-${m}-${day}`
+              if (onSelectDateToListView) {
+                onSelectDateToListView(dateStr)
+              } else if (onDateClickCreate) {
                 onDateClickCreate(dateStr)
               }
             }}

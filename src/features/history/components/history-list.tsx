@@ -146,17 +146,25 @@ export function HistoryList({
 
                       {/* Kolom 3: Status Badge */}
                       <TableCell className="align-middle px-4 py-3.5">
-                        <span
-                          className={`inline-block font-mono text-[10px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wider ${
-                            t.status === 'SUCCESS'
-                              ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
-                              : t.status === 'FAILED'
-                              ? 'bg-red-50 dark:bg-red-950/40 text-red-600 border-red-200 dark:border-red-800'
-                              : 'bg-[#F3F4F6] dark:bg-[#27272A] text-black dark:text-white border-[#E5E7EB] dark:border-[#3F3F46]'
-                          }`}
-                        >
-                          {t.status}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={`inline-block font-mono text-[10px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                              t.status === 'SUCCESS'
+                                ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                                : t.status === 'FAILED'
+                                ? 'bg-red-50 dark:bg-red-950/40 text-red-600 border-red-200 dark:border-red-800'
+                                : 'bg-[#F3F4F6] dark:bg-[#27272A] text-black dark:text-white border-[#E5E7EB] dark:border-[#3F3F46]'
+                            }`}
+                          >
+                            {t.status}
+                          </span>
+                          {Boolean(t.posts?.media_metadata?.is_simulation) && (
+                            <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 tracking-wider">
+                              <span className="size-1 rounded-full bg-amber-500 animate-pulse" />
+                              SIMULASI
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
 
                       {/* Kolom 4: Aksi */}
