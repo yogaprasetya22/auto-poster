@@ -1,0 +1,437 @@
+import { useEffect, useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '@/shared/lib/supabase'
+import {
+  CalendarDays,
+  Clock,
+  RefreshCw,
+  Play,
+  Film,
+  Plus,
+  RotateCcw,
+  Sparkles,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { HistoryDetailDrawer } from '@/features/history/components/history-detail-drawer'
+
+// Format helper WIB (UTC+7)
+function getWIBDate(iso: string) {
+  const d = new Date(iso)
+  return new Date(d.getTime() + 7 * 60 * 60 * 1000)
+}
+
+function formatDateHeader(iso: string) {
+  const wib = getWIBDate(iso)
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+  ]
+  const dayName = days[wib.getUTCDay()]
+  const dateNum = String(wib.getUTCDate()).padStart(2, '0')
+  const monthName = months[wib.getUTCMonth()]
+  const year = wib.getUTCFullYear()
+  return `${dayName}, ${dateNum} ${monthName} ${year}`
+}
+
+function formatDateKey(iso: string) {
+  const wib = getWIBDate(iso)
+  const y = wib.getUTCFullYear()
+  const m = String(wib.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(wib.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function formatTimeOnly(iso: string) {
+  const wib = getWIBDate(iso)
+  const hh = String(wib.getUTCHours()).padStart(2, '0')
+  const mm = String(wib.getUTCMinutes()).padStart(2, '0')
+  return `${hh}:${mm} WIB`
+}
+
+export function SchedulePage() {
+  const navigate = useNavigate()
+  const [targets, setTargets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
+
+  async function loadSchedules(isSilent = false) {
+    if (!isSilent) setLoading(true)
+    const { data, error } = await supabase
+      .from('post_targets')
+      .select('*, posts(*), connected_accounts(account_name, platform)')
+      .order('updated_at', { ascending: false })
+      .limit(150)
+
+    if (error) {
+      toast.error('Gagal memuat jadwal postingan')
+    } else if (data) {
+      setTargets(data)
+    }
+    if (!isSilent) setLoading(false)
+  }
+
+  useEffect(() => {
+    loadSchedules(false)
+
+    // Realtime changes
+    const channel = supabase
+      .channel('schedule_page_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_targets' },
+        () => {
+          loadSchedules(true)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  async function retry(targetId: string) {
+    const { error } = await supabase
+      .from('post_targets')
+      .update({ status: 'PENDING', error_payload: null, polling_attempts: 0 })
+      .eq('id', targetId)
+    if (error) {
+      toast.error('Gagal mereset target')
+    } else {
+      toast.success('Target direset ke PENDING!')
+      loadSchedules(true)
+      fetch('/api/cron/dispatcher').catch(() => {})
+    }
+  }
+
+  async function deleteTarget(targetId: string) {
+    if (!confirm('Hapus target jadwal ini?')) return
+    const { error } = await supabase.from('post_targets').delete().eq('id', targetId)
+    if (error) {
+      toast.error('Gagal menghapus target')
+    } else {
+      toast.success('Target berhasil dihapus')
+      if (selectedTarget?.id === targetId) setSelectedTarget(null)
+      loadSchedules(true)
+    }
+  }
+
+  // Filter status
+  const filteredTargets = useMemo(() => {
+    return targets.filter((t) => {
+      if (filterStatus === 'ALL') return true
+      if (filterStatus === 'PENDING') return t.status === 'PENDING' || t.status === 'IN_PROGRESS'
+      if (filterStatus === 'SUCCESS') return t.status === 'SUCCESS'
+      if (filterStatus === 'FAILED') return t.status === 'FAILED'
+      return true
+    })
+  }, [targets, filterStatus])
+
+  // Group by Date & Sort by Time
+  const groupedByDate = useMemo(() => {
+    // ponytail: grouping per tanggal, diurutkan kronologis tanggal terbaru
+    const map = new Map<string, { header: string; items: any[] }>()
+
+    filteredTargets.forEach((t) => {
+      const iso = t.posts?.scheduled_at || t.created_at || new Date().toISOString()
+      const key = formatDateKey(iso)
+      if (!map.has(key)) {
+        map.set(key, {
+          header: formatDateHeader(iso),
+          items: [],
+        })
+      }
+      map.get(key)!.items.push(t)
+    })
+
+    // Sort items dalam setiap tanggal berdasarkan jam (terbaru / terjadwal)
+    map.forEach((group) => {
+      group.items.sort((a, b) => {
+        const timeA = new Date(a.posts?.scheduled_at || a.created_at).getTime()
+        const timeB = new Date(b.posts?.scheduled_at || b.created_at).getTime()
+        return timeB - timeA
+      })
+    })
+
+    // Sort groups descending by date key
+    return Array.from(map.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([dateKey, data]) => ({ dateKey, ...data }))
+  }, [filteredTargets])
+
+  const pendingCount = targets.filter((t) => t.status === 'PENDING' || t.status === 'IN_PROGRESS').length
+  const successCount = targets.filter((t) => t.status === 'SUCCESS').length
+  const failedCount = targets.filter((t) => t.status === 'FAILED').length
+
+  return (
+    <div className="flex flex-col gap-6 w-full pb-16 max-w-7xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[#27272A]">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white">Jadwal Postingan</h1>
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46] text-black dark:text-white font-semibold">
+              TIMELINE VIDEO CARD
+            </span>
+          </div>
+          <p className="text-xs text-[#6B7280]">
+            Katalog visual video feed yang dijadwalkan, dikelompokkan rapi per tanggal dan jam penayangan.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => loadSchedules(false)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] text-black dark:text-white text-xs font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#27272A] transition-colors cursor-pointer"
+          >
+            <RefreshCw size={13} />
+            <span>Reload</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/composer')}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-medium hover:bg-[#262626] transition-all shadow-xs cursor-pointer"
+          >
+            <Plus size={14} />
+            <span>Buat Jadwal Baru</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Tabs Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] p-2 rounded-xl shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setFilterStatus('ALL')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium cursor-pointer ${
+              filterStatus === 'ALL'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Semua <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-[#27272A] text-white text-[10px]">{targets.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('PENDING')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+              filterStatus === 'PENDING'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Dalam Antrean <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{pendingCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('SUCCESS')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+              filterStatus === 'SUCCESS'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Sudah Terbit <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{successCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('FAILED')}
+            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+              filterStatus === 'FAILED'
+                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Gagal <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-red-600 text-white text-[10px]">{failedCount}</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] font-mono text-[#6B7280]">
+          Total {groupedByDate.length} Hari Terjadwal
+        </span>
+      </div>
+
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center p-16 gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent dark:border-white dark:border-t-transparent" />
+          <span className="font-mono text-xs text-[#6B7280]">Memuat card timeline postingan...</span>
+        </div>
+      ) : groupedByDate.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-16 bg-white dark:bg-[#18181B] rounded-2xl border border-[#E5E7EB] dark:border-[#27272A] text-center gap-3">
+          <div className="size-12 rounded-full bg-[#F3F4F6] dark:bg-[#27272A] flex items-center justify-center text-[#6B7280]">
+            <Film size={22} />
+          </div>
+          <div className="flex flex-col gap-1 max-w-sm">
+            <h3 className="text-sm font-semibold text-black dark:text-white">Belum Ada Video Terjadwal</h3>
+            <p className="text-xs text-[#6B7280]">
+              Mulai buat konten baru di menu Composer untuk menjadwalkan video ke TikTok, Instagram, Facebook, dan Threads.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/composer')}
+            className="mt-2 px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+          >
+            Buka Composer
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-10">
+          {groupedByDate.map((group) => (
+            <section key={group.dateKey} className="flex flex-col gap-4">
+              {/* Sticky Date Header */}
+              <div className="sticky top-0 z-10 flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/90 dark:bg-[#18181B]/90 backdrop-blur-md border border-[#E5E7EB] dark:border-[#27272A] shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-7 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center">
+                    <CalendarDays size={14} />
+                  </div>
+                  <h2 className="text-sm font-bold text-black dark:text-white tracking-tight">
+                    {group.header}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-[#F3F4F6] dark:bg-[#27272A] text-[#6B7280] font-medium border border-[#E5E7EB] dark:border-[#3F3F46]">
+                    {group.items.length} Postingan
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid Video Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {group.items.map((t) => {
+                  const mediaUrl = t.posts?.gdrive_stream_url || t.posts?.gdrive_lh3_url || ''
+                  const scheduledIso = t.posts?.scheduled_at || t.created_at
+                  const timeLabel = formatTimeOnly(scheduledIso)
+                  const isSimulation = Boolean(t.posts?.media_metadata?.is_simulation)
+                  const title = t.posts?.title || t.posts?.content_text || 'Tanpa Judul'
+
+                  return (
+                    <div
+                      key={t.id}
+                      onClick={() => setSelectedTarget(t)}
+                      className="group relative flex flex-col bg-white dark:bg-[#18181B] rounded-2xl border border-[#E5E7EB] dark:border-[#27272A] overflow-hidden shadow-xs hover:shadow-md hover:border-black dark:hover:border-white transition-all cursor-pointer"
+                    >
+                      {/* Video / Thumbnail Canvas Container (9:16 Aspect Preview) */}
+                      <div className="relative w-full aspect-9/16 bg-black flex items-center justify-center overflow-hidden">
+                        {mediaUrl ? (
+                          t.posts?.media_type === 'IMAGE' ? (
+                            <img
+                              src={mediaUrl}
+                              alt={title}
+                              className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="relative w-full h-full">
+                              <video
+                                src={mediaUrl}
+                                preload="metadata"
+                                muted
+                                playsInline
+                                className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                              />
+                              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                <div className="size-10 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-white/20">
+                                  <Play size={18} className="fill-white translate-x-0.5" />
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-zinc-500 gap-1.5 p-4 text-center">
+                            <Film size={28} />
+                            <span className="text-[10px] font-mono">Teks Saja</span>
+                          </div>
+                        )}
+
+                        {/* Top Overlays: Time Badge & Status Badge */}
+                        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 pointer-events-none">
+                          {/* Jam Posting Badge */}
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/75 backdrop-blur-md text-white font-mono text-[10px] font-bold shadow-xs border border-white/10">
+                            <Clock size={11} className="text-amber-400" />
+                            <span>{timeLabel}</span>
+                          </div>
+
+                          {/* Status Badge */}
+                          <div className="flex items-center gap-1">
+                            {isSimulation && (
+                              <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500 text-black shadow-xs">
+                                SIM
+                              </span>
+                            )}
+                            <span
+                              className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded shadow-xs uppercase tracking-wider ${
+                                t.status === 'SUCCESS'
+                                  ? 'bg-emerald-500 text-white'
+                                  : t.status === 'FAILED'
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-zinc-800/90 text-white border border-white/10'
+                              }`}
+                            >
+                              {t.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bottom Video Overlay: Platform Badge */}
+                        <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 pointer-events-none">
+                          <span className="px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-white font-mono text-[10px] font-semibold uppercase tracking-wider border border-white/10">
+                            {t.platform}
+                          </span>
+                          {t.connected_accounts?.account_name && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-zinc-200 font-mono text-[9px] truncate max-w-[100px]">
+                              @{t.connected_accounts.account_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Bottom Meta */}
+                      <div className="p-3 flex flex-col gap-1.5 justify-between flex-1">
+                        <h4 className="text-xs font-semibold text-black dark:text-white line-clamp-2 leading-snug">
+                          {title}
+                        </h4>
+
+                        {t.posts?.content_text && (
+                          <p className="text-[11px] text-[#6B7280] line-clamp-2 leading-relaxed">
+                            {t.posts.content_text}
+                          </p>
+                        )}
+
+                        <div className="pt-2 mt-auto border-t border-[#F3F4F6] dark:border-[#27272A] flex items-center justify-between text-[10px] text-[#6B7280] font-mono">
+                          <span className="flex items-center gap-1">
+                            <Sparkles size={11} className="text-purple-500" />
+                            <span>Detail Inspeksi</span>
+                          </span>
+                          <span className="group-hover:translate-x-0.5 transition-transform">
+                            Lihat &rarr;
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {/* Drawer Detail Inspeksi Konten dengan Simulator 9:16 */}
+      <HistoryDetailDrawer
+        target={selectedTarget}
+        onClose={() => setSelectedTarget(null)}
+        onRetry={retry}
+        onDelete={deleteTarget}
+      />
+    </div>
+  )
+}

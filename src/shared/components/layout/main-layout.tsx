@@ -10,6 +10,7 @@ import { Separator } from '@/shared/components/ui/separator'
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard Overview',
   '/composer': 'Composer Postingan',
+  '/schedule': 'Jadwal Postingan',
   '/history': 'Riwayat Eksekusi',
   '/settings': 'Pengaturan & Koneksi Akun',
 }

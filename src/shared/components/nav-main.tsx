@@ -7,11 +7,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/shared/components/ui/sidebar"
-import { LayoutDashboard, PenSquare, History, Settings } from "lucide-react"
+import { LayoutDashboard, PenSquare, CalendarClock, History, Settings } from "lucide-react"
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Composer", url: "/composer", icon: PenSquare },
+  { title: "Jadwal", url: "/schedule", icon: CalendarClock },
   { title: "History", url: "/history", icon: History },
   { title: "Settings", url: "/settings", icon: Settings },
 ]
