@@ -22,7 +22,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" className="dark:bg-[#090A0C] dark:text-white" {...props}>
       <SidebarHeader className="p-3 border-b border-border/60">
         <SidebarMenu>
           <SidebarMenuItem>
