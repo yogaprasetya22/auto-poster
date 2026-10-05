@@ -86,20 +86,27 @@ export default async function handler(req, res) {
         folderId = rootFolderId;
       }
 
-      // Request Resumable Session URL directly from Google Drive API
+      // Ambil origin asli browser client agar Google mengizinkan CORS PUT dari domain tersebut
+      const clientOrigin = req.headers.origin || req.headers.referer || 'https://auto-poster-blush.vercel.app';
+      const cleanOrigin = clientOrigin.replace(/\/$/, '');
+
+      // Request Resumable Session URL directly from Google Drive API with CORS Origin
       const metadata = {
         name: fileName,
         parents: [folderId],
       };
 
+      const initHeaders = {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': mimeType,
+        'X-Upload-Content-Length': String(fileSize || 0),
+        Origin: cleanOrigin,
+      };
+
       const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json; charset=UTF-8',
-          'X-Upload-Content-Type': mimeType,
-          'X-Upload-Content-Length': String(fileSize || 0),
-        },
+        headers: initHeaders,
         body: JSON.stringify(metadata),
       });
 
@@ -122,6 +129,51 @@ export default async function handler(req, res) {
     } catch (err) {
       console.error('Init Resumable Error:', err);
       return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // Mode 2: Client selesai upload direct ke GDrive, minta server set public reader permission
+  if (req.url?.includes('action=finalize-permissions') || req.headers['content-type']?.includes('application/json')) {
+    try {
+      let bodyData = req.body;
+      if (typeof bodyData === 'string') {
+        try { bodyData = JSON.parse(bodyData); } catch {}
+      } else if (!bodyData) {
+        const buffers = [];
+        for await (const chunk of req) { buffers.push(chunk); }
+        const raw = Buffer.concat(buffers).toString('utf8');
+        try { bodyData = JSON.parse(raw); } catch { bodyData = {}; }
+      }
+
+      const { fileId } = bodyData || {};
+      if (fileId) {
+        let clientId = process.env.GDRIVE_CLIENT_ID;
+        let clientSecret = process.env.GDRIVE_CLIENT_SECRET;
+        let refreshToken = process.env.GDRIVE_REFRESH_TOKEN;
+
+        if (!refreshToken && fs.existsSync('gdrive_oauth.json')) {
+          try {
+            const local = JSON.parse(fs.readFileSync('gdrive_oauth.json', 'utf8'));
+            clientId = clientId || local.client_id;
+            clientSecret = clientSecret || local.client_secret;
+            refreshToken = refreshToken || local.refresh_token;
+          } catch {}
+        }
+
+        const oauth2 = new google.auth.OAuth2(clientId, clientSecret);
+        oauth2.setCredentials({ refresh_token: refreshToken });
+        const drive = google.drive({ version: 'v3', auth: oauth2 });
+
+        await drive.permissions.create({
+          fileId,
+          requestBody: { role: 'reader', type: 'anyone' },
+          supportsAllDrives: true,
+        }).catch(() => {});
+
+        return res.status(200).json({ success: true, fileId });
+      }
+    } catch (e) {
+      // non-blocking
     }
   }
 

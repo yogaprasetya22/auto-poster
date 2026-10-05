@@ -38,9 +38,8 @@ export async function uploadToGDrive(
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', uploadUrl)
 
-    if (accessToken) {
-      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`)
-    }
+    // Google Resumable Session URL sudah membawa token otentikasi di query URL-nya.
+    // Menambahkan custom Authorization header pada PUT akan memicu preflight CORS ketat dari browser.
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
 
     xhr.upload.onprogress = (e) => {
@@ -56,6 +55,13 @@ export async function uploadToGDrive(
           const driveData = JSON.parse(xhr.responseText || '{}')
           const fileId = driveData.id
           if (!fileId) return reject(new Error('Google Drive tidak mengembalikan ID file.'))
+
+          // Trigger finalize public reader permission di server
+          fetch('/api/upload?action=finalize-permissions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileId }),
+          }).catch(() => {})
 
           const appOrigin = window.location.origin
           return resolve({
@@ -75,6 +81,10 @@ export async function uploadToGDrive(
     }
 
     xhr.onerror = () => {
+      // Fallback: Jika direct PUT ke googleapis diblokir CORS oleh ekstensi/browser, coba via multipart proxy
+      if (file.size < 4.5 * 1024 * 1024) {
+        return uploadViaMultipart(file, onProgress).then(resolve).catch(reject)
+      }
       reject(new Error('Koneksi jaringan terputus saat mengunggah media ke Google Drive.'))
     }
 
@@ -83,6 +93,37 @@ export async function uploadToGDrive(
     }
 
     xhr.send(file)
+  })
+}
+
+/** Fallback helper via multipart serverless proxy */
+function uploadViaMultipart(file: File, onProgress?: (percent: number) => void): Promise<GDriveUploadResult> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', '/api/upload')
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100))
+      }
+    }
+
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText || '{}')
+        if (xhr.status >= 200 && xhr.status < 300 && data?.success) {
+          return resolve(data)
+        }
+        reject(new Error(data?.error || `Upload gagal (${xhr.status})`))
+      } catch {
+        reject(new Error(`Upload gagal (${xhr.status})`))
+      }
+    }
+
+    xhr.onerror = () => reject(new Error('Koneksi jaringan terputus saat upload.'))
+    const fd = new FormData()
+    fd.append('file', file)
+    xhr.send(fd)
   })
 }
 
