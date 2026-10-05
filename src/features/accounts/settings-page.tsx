@@ -494,15 +494,15 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 w-full pb-10">
       {/* Top Action Bar & Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-black">Pengaturan & Koneksi Akun</h1>
-            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-[#F3F4F6] border border-[#E5E7EB] text-black font-semibold">
+            <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white">Pengaturan & Koneksi Akun</h1>
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] text-black dark:text-white font-semibold">
               OAUTH 2.0 PROTOCOL
             </span>
           </div>
-          <p className="text-xs text-[#6B7280]">
+          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
             Hubungkan akun media sosial Anda secara otomatis via 1-Click OAuth dan kelola proxy transmisi storage engine.
           </p>
         </div>
@@ -739,8 +739,8 @@ export function SettingsPage() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-black">psychology</span>
-              <h2 className="text-sm font-semibold text-black uppercase tracking-wider font-mono">
+              <span className="material-symbols-outlined text-[18px] text-black dark:text-white">psychology</span>
+              <h2 className="text-sm font-semibold text-black dark:text-white uppercase tracking-wider font-mono">
                 AI Brand Tuning & Knowledge Memory
               </h2>
             </div>

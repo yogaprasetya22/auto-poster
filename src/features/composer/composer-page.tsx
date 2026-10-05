@@ -115,17 +115,17 @@ export function ComposerPage() {
   return (
     <div className="w-full flex flex-col gap-6">
       {/* Top Breadcrumb & Metadata Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-[#E5E7EB]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-black font-semibold px-2 py-0.5 rounded bg-[#F3F4F6] border border-[#E5E7EB]">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-black dark:text-white font-semibold px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
               Pipeline Mode
             </span>
             <span className="text-[#9CA3AF] font-mono text-xs">•</span>
-            <span className="font-mono text-xs text-black font-semibold">Real-Time Sync 4 Nodes</span>
+            <span className="font-mono text-xs text-black dark:text-white font-semibold">Real-Time Sync 4 Nodes</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-black mt-1">Buat Postingan Baru</h1>
-          <p className="text-xs text-[#6B7280]">
+          <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white mt-1">Buat Postingan Baru</h1>
+          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
             Jadwalkan & orkestrasikan distribusi video vertikal multi-channel secara serentak ke Instagram Reels, Facebook Page, Threads, dan TikTok.
           </p>
         </div>

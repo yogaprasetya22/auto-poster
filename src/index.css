@@ -103,3 +103,38 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground; }
 }
+
+/* Ensure text colors adapt in dark mode */
+.dark :not([class*="dark:bg-white"]):not([class*="dark:bg-zinc-100"]):not([class*="dark:bg-gray-100"]) > .text-black,
+.dark .text-black:not([class*="dark:text-black"]):not([class*="dark:bg-white"] *) {
+  color: #FFFFFF;
+}
+
+.dark [class*="dark:bg-white"] .text-black,
+.dark [class*="dark:bg-white"].text-black,
+.dark .dark\:text-black {
+  color: #000000 !important;
+}
+
+.dark .text-\[\#111827\],
+.dark .text-\[\#374151\],
+.dark .text-\[\#4B5563\] {
+  color: #E5E7EB;
+}
+
+.dark .text-\[\#6B7280\] {
+  color: #9CA3AF;
+}
+
+/* Border & background helpers in dark mode */
+.dark .border-\[\#E5E7EB\],
+.dark .border-\[\#D1D5DB\] {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .divide-\[\#F3F4F6\],
+.dark .divide-\[\#E5E7EB\] {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+
