@@ -88,28 +88,28 @@ export function CaptionEditor() {
       </div>
 
       {showPromptInput && (
-        <div className="flex items-center gap-2 p-2 rounded-lg bg-[#F8F9FA] border border-[#E5E7EB]">
+        <div className="flex items-center gap-2 p-2 rounded-lg bg-[#F8F9FA] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
           <input
             type="text"
             value={topicInput}
             onChange={(e) => setTopicInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleGenerateCaption()}
             placeholder={title.trim() ? `Topik: "${title}" (atau ketik topik baru)...` : 'Ketik ide/topik caption (contoh: Promo Kopi 50%)...'}
-            className="flex-1 bg-white border border-[#E5E7EB] px-2.5 py-1.5 rounded-md text-xs text-black placeholder:text-[#9CA3AF] focus:outline-none focus:border-black"
+            className="flex-1 bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] px-2.5 py-1.5 rounded-md text-xs text-black dark:text-white placeholder:text-[#9CA3AF] focus:outline-none focus:border-black dark:focus:border-white"
             autoFocus
           />
           <button
             type="button"
             onClick={handleGenerateCaption}
             disabled={isGenerating}
-            className="px-3 py-1.5 rounded-md bg-black text-white text-xs font-semibold hover:bg-[#262626] cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 rounded-md bg-black text-white dark:bg-white dark:text-black text-xs font-semibold hover:bg-[#262626] dark:hover:bg-[#E5E7EB] cursor-pointer disabled:opacity-50"
           >
             {isGenerating ? 'Memproses...' : 'Generate'}
           </button>
           <button
             type="button"
             onClick={() => setShowPromptInput(false)}
-            className="px-2 py-1.5 text-xs text-[#6B7280] hover:text-black cursor-pointer"
+            className="px-2 py-1.5 text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-black dark:hover:text-white cursor-pointer"
           >
             Batal
           </button>
@@ -123,20 +123,20 @@ export function CaptionEditor() {
         onChange={(e) => setContentText(e.target.value)}
         rows={3}
         placeholder="Tulis caption konten Anda di sini atau klik '✨ Magic AI Caption' untuk dibuatkan otomatis..."
-        className="w-full bg-[#F9FAFB] border border-[#E5E7EB] px-3.5 py-2.5 rounded-lg text-xs text-black placeholder:text-[#9CA3AF] resize-none focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all leading-relaxed overflow-hidden"
+        className="w-full bg-[#F9FAFB] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] px-3.5 py-2.5 rounded-lg text-xs text-black dark:text-white placeholder:text-[#9CA3AF] resize-none focus:outline-none focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white transition-all leading-relaxed overflow-hidden"
         maxLength={63206}
       />
 
-      <div className="flex flex-wrap items-center justify-between text-[11px] text-[#6B7280]">
+      <div className="flex flex-wrap items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
         <div className="flex items-center gap-3">
           <span className="font-mono">{len} karakter</span>
           {len > LIMITS.threads && (
-            <span className="flex items-center gap-1 text-amber-600 font-medium">
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
               <AlertTriangle size={12} /> Threads max {LIMITS.threads}
             </span>
           )}
           {len > LIMITS.instagram && (
-            <span className="flex items-center gap-1 text-red-600 font-medium">
+            <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
               <AlertTriangle size={12} /> IG/TikTok max {LIMITS.instagram}
             </span>
           )}

@@ -74,11 +74,11 @@ export function PhoneSimulator({ channel, setChannel }: PhoneSimulatorProps) {
   return (
     <div className="flex flex-col gap-3 min-w-0">
       {/* Header with Destination Simulator Tabs */}
-      <div className="flex flex-col gap-2 bg-white p-3.5 rounded-xl border border-[#E5E7EB] shadow-xs">
+      <div className="flex flex-col gap-2 bg-white dark:bg-[#111216] p-3.5 rounded-xl border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] shadow-xs">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[16px] text-black">smartphone</span>
-            <span className="text-xs font-semibold text-black">Canvas Preview 9:16</span>
+            <span className="material-symbols-outlined text-[16px] text-black dark:text-white">smartphone</span>
+            <span className="text-xs font-semibold text-black dark:text-white">Canvas Preview 9:16</span>
           </div>
           {/* Safe Zone Toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
@@ -86,14 +86,14 @@ export function PhoneSimulator({ channel, setChannel }: PhoneSimulatorProps) {
               type="checkbox"
               checked={showSafeZone}
               onChange={(e) => setShowSafeZone(e.target.checked)}
-              className="accent-black size-3.5 rounded"
+              className="accent-black dark:accent-white size-3.5 rounded"
             />
-            <span className="text-[11px] text-[#6B7280] font-medium">Safe Zone Grid</span>
+            <span className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-medium">Safe Zone Grid</span>
           </label>
         </div>
 
         {/* Channel Simulator Selector Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-[#F3F4F6] rounded-lg border border-[#E5E7EB]">
+        <div className="grid grid-cols-4 gap-1 p-1 bg-[#F3F4F6] dark:bg-[#16181D] rounded-lg border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
           {(['tiktok', 'reels', 'threads', 'facebook'] as const).map((tab) => {
             const active = channel === tab
             const labelMap = { tiktok: 'TikTok', reels: 'IG Reels', threads: 'Threads', facebook: 'FB Reels' }
@@ -103,7 +103,9 @@ export function PhoneSimulator({ channel, setChannel }: PhoneSimulatorProps) {
                 type="button"
                 onClick={() => setChannel(tab)}
                 className={`py-1 rounded text-xs transition-all font-medium cursor-pointer ${
-                  active ? 'text-white bg-black font-semibold shadow-xs' : 'text-[#6B7280] hover:text-black'
+                  active
+                    ? 'text-white bg-black dark:text-black dark:bg-white font-semibold shadow-xs'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-black dark:hover:text-white'
                 }`}
               >
                 {labelMap[tab]}

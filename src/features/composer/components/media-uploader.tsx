@@ -108,8 +108,8 @@ export function MediaUploader() {
         onDragOver={(e) => e.preventDefault()}
         className={`relative overflow-hidden flex flex-col items-center justify-center gap-2.5 p-8 rounded-xl border border-dashed transition-all shadow-xs ${
           isUploading
-            ? 'border-black/40 bg-zinc-50 dark:bg-zinc-900/50 cursor-wait pointer-events-none'
-            : 'border-[#D1D5DB] hover:border-black bg-[#FAFAFA] hover:bg-white cursor-pointer'
+            ? 'border-black/40 dark:border-white/40 bg-zinc-50 dark:bg-zinc-900/50 cursor-wait pointer-events-none'
+            : 'border-[#D1D5DB] dark:border-[rgba(255,255,255,0.15)] hover:border-black dark:hover:border-white bg-[#FAFAFA] dark:bg-[#16181D] hover:bg-white dark:hover:bg-[#1C1E24] cursor-pointer'
         }`}
       >
         <div className="size-11 rounded-full bg-white dark:bg-zinc-800 border border-[#E5E7EB] dark:border-zinc-700 flex items-center justify-center text-black dark:text-white shadow-xs">

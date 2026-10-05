@@ -132,22 +132,26 @@ export function AccountSelector() {
               }}
               className={`flex items-center justify-between p-2 rounded-lg border text-left transition-all ${
                 isCooldown
-                  ? 'border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 text-[#6B7280] opacity-80 cursor-not-allowed'
+                  ? 'border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 text-[#6B7280] dark:text-[#9CA3AF] opacity-80 cursor-not-allowed'
                   : isSelected
-                  ? 'border-black bg-black text-white shadow-xs cursor-pointer'
-                  : 'border-[#E5E7EB] bg-[#FAFAFA] text-[#4B5563] hover:border-black hover:bg-white cursor-pointer'
+                  ? 'border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-xs cursor-pointer'
+                  : 'border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] bg-[#FAFAFA] dark:bg-[#16181D] text-[#4B5563] dark:text-[#D1D5DB] hover:border-black dark:hover:border-white hover:bg-white dark:hover:bg-[#1C1E24] cursor-pointer'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
                 <div className={`size-5 rounded flex items-center justify-center shrink-0 ${
-                  isCooldown ? 'bg-amber-100 text-amber-700' : isSelected ? 'bg-white/20' : 'bg-[#E5E7EB]'
+                  isCooldown
+                    ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
+                    : isSelected
+                    ? 'bg-white/20 dark:bg-black/20'
+                    : 'bg-[#E5E7EB] dark:bg-[#262933]'
                 }`}>
-                  <IconComponent className={`size-3 ${isSelected ? 'text-white' : 'text-black'}`} />
+                  <IconComponent className={`size-3 ${isSelected ? 'text-white dark:text-black' : 'text-black dark:text-white'}`} />
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-[11px] font-semibold truncate leading-tight">{acc.account_name}</span>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`text-[9px] font-mono uppercase ${isSelected ? 'text-white/70' : 'text-[#6B7280]'}`}>
+                    <span className={`text-[9px] font-mono uppercase ${isSelected ? 'text-white/70 dark:text-black/70' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`}>
                       {config?.label || acc.platform}
                     </span>
                     {quota && (
@@ -155,10 +159,10 @@ export function AccountSelector() {
                         title="Jumlah postingan hari ini langsung dari API platform resmi"
                         className={`text-[8.5px] font-mono px-1 py-0.2 rounded font-bold ${
                           isSelected
-                            ? 'bg-white/20 text-white'
+                            ? 'bg-white/20 dark:bg-black/20 text-white dark:text-black'
                             : quota.countToday >= quota.safeLimit
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300'
+                            : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
                         }`}
                       >
                         {quota.countToday}/{quota.limit} Hari Ini
@@ -176,10 +180,10 @@ export function AccountSelector() {
               <div
                 className={`size-3.5 rounded-full flex items-center justify-center border shrink-0 transition-colors ${
                   isCooldown
-                    ? 'border-amber-300 bg-transparent text-amber-500'
+                    ? 'border-amber-300 dark:border-amber-700 bg-transparent text-amber-500'
                     : isSelected
-                    ? 'bg-white border-white text-black'
-                    : 'border-[#9CA3AF]'
+                    ? 'bg-white dark:bg-black border-white dark:border-black text-black dark:text-white'
+                    : 'border-[#9CA3AF] dark:border-[#52525B]'
                 }`}
               >
                 {isSelected && !isCooldown && <Check size={9} strokeWidth={3} />}

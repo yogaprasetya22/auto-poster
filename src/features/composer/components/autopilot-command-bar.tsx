@@ -66,18 +66,18 @@ export function AutopilotCommandBar() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white text-black p-5 border border-[#E5E7EB] shadow-xs">
+    <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#111216] text-black dark:text-white p-5 border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] shadow-xs">
       <div className="flex flex-col gap-3">
         {/* Header Tag */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-6 rounded-lg bg-[#F3F4F6] flex items-center justify-center border border-[#E5E7EB]">
+            <div className="size-6 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] flex items-center justify-center border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
               <Sparkles className="size-3.5 text-amber-500 animate-pulse" />
             </div>
-            <span className="text-xs font-bold tracking-wide uppercase text-black">
+            <span className="text-xs font-bold tracking-wide uppercase text-black dark:text-white">
               1-Prompt Studio Autopilot
             </span>
-            <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+            <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800/60">
               KNOWLEDGE CONNECTED
             </span>
           </div>
@@ -92,14 +92,14 @@ export function AutopilotCommandBar() {
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !isRunning && handleRunAutopilot()}
             placeholder="Ketik ide postingan (misal: 'Edukasi cara menaikkan rating resto pakai kartu review JAGRES')..."
-            className="w-full bg-[#F9FAFB] hover:bg-white focus:bg-white border border-[#E5E7EB] focus:border-black rounded-xl px-4 py-2.5 text-xs text-black placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-black transition-all pr-24 font-normal"
+            className="w-full bg-[#F9FAFB] dark:bg-[#16181D] hover:bg-white dark:hover:bg-[#1C1E24] focus:bg-white dark:focus:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] focus:border-black dark:focus:border-white rounded-xl px-4 py-2.5 text-xs text-black dark:text-white placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all pr-24 font-normal"
             disabled={isRunning}
           />
           <button
             type="button"
             onClick={() => handleRunAutopilot()}
             disabled={isRunning}
-            className="absolute right-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-semibold hover:bg-[#262626] transition-all cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+            className="absolute right-1.5 px-3 py-1.5 rounded-lg bg-black text-white dark:bg-white dark:text-black text-xs font-semibold hover:bg-[#262626] dark:hover:bg-[#E5E7EB] transition-all cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
           >
             {isRunning ? (
               <>
@@ -117,14 +117,14 @@ export function AutopilotCommandBar() {
 
         {/* Quick Preset Chips */}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          <span className="text-[10px] text-[#6B7280] font-mono mr-1">Preset Cepat:</span>
+          <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] font-mono mr-1">Preset Cepat:</span>
           {QUICK_PRESETS.map((p, idx) => (
             <button
               key={idx}
               type="button"
               disabled={isRunning}
               onClick={() => handleRunAutopilot(p.prompt)}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-[#F9FAFB] hover:bg-[#F3F4F6] border border-[#E5E7EB] hover:border-black text-[#374151] hover:text-black transition-all cursor-pointer truncate max-w-full font-medium"
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-[#F9FAFB] dark:bg-[#16181D] hover:bg-[#F3F4F6] dark:hover:bg-[#262933] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] hover:border-black dark:hover:border-white text-[#374151] dark:text-[#D1D5DB] hover:text-black dark:hover:text-white transition-all cursor-pointer truncate max-w-full font-medium"
             >
               {p.label}
             </button>

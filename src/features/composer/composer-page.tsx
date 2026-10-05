@@ -166,16 +166,16 @@ export function ComposerPage() {
           <AutopilotCommandBar />
 
           {/* Studio Canvas Section */}
-          <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-xs divide-y divide-[#F3F4F6]">
+          <div className="bg-white dark:bg-[#111216] rounded-2xl border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] shadow-xs divide-y divide-[#F3F4F6] dark:divide-[rgba(255,255,255,0.06)]">
             {/* 1. Judul & Akun Selector */}
             <div className="p-4 sm:p-5 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-black flex items-center gap-1.5" htmlFor="campaign-title">
+                  <label className="text-xs font-semibold text-black dark:text-white flex items-center gap-1.5" htmlFor="campaign-title">
                     <span className="material-symbols-outlined text-[15px]">label</span>
                     <span>Judul Konten (Internal Workspace)</span>
                   </label>
-                  <span className="font-mono text-[10px] text-[#6B7280]">OPSIONAL • TAG TRACKING</span>
+                  <span className="font-mono text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">OPSIONAL • TAG TRACKING</span>
                 </div>
                 <div className="relative flex items-center">
                   <input
@@ -183,11 +183,11 @@ export function ComposerPage() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Contoh: Launching Feature v2.4 Walkthrough"
-                    className="w-full bg-[#F9FAFB] border border-[#E5E7EB] px-3.5 py-2.5 rounded-xl text-xs text-black placeholder:text-[#9CA3AF] focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
+                    className="w-full bg-[#F9FAFB] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] px-3.5 py-2.5 rounded-xl text-xs text-black dark:text-white placeholder:text-[#9CA3AF] focus:outline-none focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white transition-all"
                     maxLength={200}
                   />
                   <div className="absolute right-2.5 flex items-center gap-1 pointer-events-none">
-                    <kbd className="font-mono text-[10px] text-[#6B7280] bg-[#F3F4F6] border border-[#E5E7EB] px-1 rounded">
+                    <kbd className="font-mono text-[10px] text-[#6B7280] dark:text-[#9CA3AF] bg-[#F3F4F6] dark:bg-[#262933] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.1)] px-1 rounded">
                       ⌘J
                     </kbd>
                   </div>
@@ -215,9 +215,9 @@ export function ComposerPage() {
 
             {/* Peringatan & Panduan Instagram Reels Pra-Posting */}
             {targetAccountIds.length > 0 && (
-              <div className="p-4 sm:p-5 bg-[#FFFBEB] border-t border-[#FDE68A] flex flex-col gap-2.5 rounded-b-2xl">
+              <div className="p-4 sm:p-5 bg-[#FFFBEB] dark:bg-amber-950/20 border-t border-[#FDE68A] dark:border-amber-900/40 flex flex-col gap-2.5 rounded-b-2xl">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#B45309]">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#B45309] dark:text-amber-400">
                     <span className="material-symbols-outlined text-[17px]">verified_user</span>
                     <span>Checklist Keamanan Posting Instagram & TikTok (Anti-Gagal)</span>
                   </div>
@@ -228,7 +228,7 @@ export function ComposerPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#92400E] leading-relaxed">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#92400E] dark:text-amber-300/90 leading-relaxed">
                   <div className="flex items-start gap-1.5">
                     <span className="font-bold">✓</span>
                     <span>
@@ -244,7 +244,7 @@ export function ComposerPage() {
                 </div>
 
                 {mediaType === 'VIDEO' && media && (!media.durationSeconds || media.durationSeconds < 3) && (
-                  <div className="mt-1 p-2 bg-red-100 border border-red-300 rounded-lg text-red-700 text-xs font-semibold flex items-center gap-2">
+                  <div className="mt-1 p-2 bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-900/60 rounded-lg text-red-700 dark:text-red-300 text-xs font-semibold flex items-center gap-2">
                     <span className="material-symbols-outlined text-[16px]">error</span>
                     <span>Durasi video terlalu pendek ({media.durationSeconds || 0}s). Instagram & TikTok mewajibkan minimal 3 detik!</span>
                   </div>
@@ -258,7 +258,7 @@ export function ComposerPage() {
             <button
               type="button"
               onClick={reset}
-              className="px-4 py-2 rounded-lg border border-[#E5E7EB] bg-white text-xs font-medium text-[#374151] hover:text-black hover:border-black transition-colors"
+              className="px-4 py-2 rounded-lg border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] bg-white dark:bg-[#16181D] text-xs font-medium text-[#374151] dark:text-[#E5E7EB] hover:text-black dark:hover:text-white hover:border-black dark:hover:border-white transition-colors cursor-pointer"
             >
               Reset Draft
             </button>

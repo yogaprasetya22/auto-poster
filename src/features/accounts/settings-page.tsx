@@ -521,7 +521,7 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={loadAccounts}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-white border border-[#E5E7EB] text-black text-xs font-medium hover:bg-[#F3F4F6] transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-white dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.1)] text-black dark:text-white text-xs font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#262933] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">refresh</span>
             <span>Refresh</span>
@@ -532,50 +532,50 @@ export function SettingsPage() {
       {/* 4-Bento Telemetry Cards (100% Dynamic) */}
       <SkeletonContainer isLoading={loading}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between shadow-xs">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
             <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280]">Channels Online</span>
-              <span className="text-2xl font-bold font-mono text-black mt-0.5">
-                {accounts.length} <span className="text-xs font-normal text-[#6B7280]">/ 4 Platform</span>
+              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Channels Online</span>
+              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
+                {accounts.length} <span className="text-xs font-normal text-[#6B7280] dark:text-[#9CA3AF]">/ 4 Platform</span>
               </span>
             </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] border border-[#E5E7EB] flex items-center justify-center text-black">
+            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
               <span className="material-symbols-outlined text-[20px]">hub</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between shadow-xs">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
             <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280]">Total Pipeline Quota</span>
-              <span className="text-2xl font-bold font-mono text-black mt-0.5">
-                {quotaHealthPercent}% <span className="text-xs font-medium text-black">Healthy</span>
+              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Total Pipeline Quota</span>
+              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
+                {quotaHealthPercent}% <span className="text-xs font-medium text-black dark:text-white">Healthy</span>
               </span>
             </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] border border-[#E5E7EB] flex items-center justify-center text-black">
+            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
               <span className="material-symbols-outlined text-[20px]">data_saver_on</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between shadow-xs">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
             <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280]">Edge Engine Latency</span>
-              <span className="text-2xl font-bold font-mono text-black mt-0.5">
-                {systemLatency} ms <span className="text-xs font-medium text-black">live</span>
+              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Edge Engine Latency</span>
+              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
+                {systemLatency} ms <span className="text-xs font-medium text-black dark:text-white">live</span>
               </span>
             </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] border border-[#E5E7EB] flex items-center justify-center text-black">
+            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
               <span className="material-symbols-outlined text-[20px]">speed</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between shadow-xs">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
             <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280]">Storage Proxy Data</span>
-              <span className="text-2xl font-bold font-mono text-black mt-0.5">
-                {estimatedStorageMB} MB <span className="text-xs font-normal text-[#6B7280]">Active</span>
+              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Storage Proxy Data</span>
+              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
+                {estimatedStorageMB} MB <span className="text-xs font-normal text-[#6B7280] dark:text-[#9CA3AF]">Active</span>
               </span>
             </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] border border-[#E5E7EB] flex items-center justify-center text-black">
+            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
               <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
             </div>
           </div>
@@ -587,15 +587,15 @@ export function SettingsPage() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-black">dynamic_feed</span>
-              <h2 className="text-sm font-semibold text-black">Platform Sosial Media Terhubung</h2>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#F3F4F6] text-black border border-[#E5E7EB]">
+              <span className="material-symbols-outlined text-[18px] text-black dark:text-white">dynamic_feed</span>
+              <h2 className="text-sm font-semibold text-black dark:text-white">Platform Sosial Media Terhubung</h2>
+              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#1C1E24] text-black dark:text-white border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
                 {accounts.length} Akun Aktif
               </span>
             </div>
-            <div className="flex items-center gap-3 text-xs text-[#6B7280]">
-              <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-black"></span> Active</span>
-              <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-white border border-black"></span> Disconnected</span>
+            <div className="flex items-center gap-3 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+              <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-black dark:bg-white"></span> Active</span>
+              <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-white dark:bg-black border border-black dark:border-white"></span> Disconnected</span>
             </div>
           </div>
 
@@ -608,12 +608,12 @@ export function SettingsPage() {
               return (
                 <div
                   key={platform.key}
-                  className="p-4 rounded-xl bg-white border border-[#E5E7EB] hover:border-black transition-all shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                  className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] hover:border-black dark:hover:border-white transition-all shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4"
                 >
                   <div className="flex items-start md:items-center gap-4 min-w-0">
                     <div className="relative shrink-0">
-                      <div className="size-12 rounded-xl bg-[#F3F4F6] border border-[#E5E7EB] flex items-center justify-center overflow-hidden">
-                        <span className="material-symbols-outlined text-[24px] text-black">{platform.iconName}</span>
+                      <div className="size-12 rounded-xl bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center overflow-hidden">
+                        <span className="material-symbols-outlined text-[24px] text-black dark:text-white">{platform.iconName}</span>
                       </div>
                       {isConnected && (
                         <span className={`absolute -bottom-1 -right-1 size-4 rounded-full flex items-center justify-center text-white ${
@@ -699,7 +699,7 @@ export function SettingsPage() {
                             key={c.id}
                             type="button"
                             onClick={() => handleDisconnect(c.id, c.account_name)}
-                            className="px-3 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-xs text-red-600 hover:border-red-600 hover:bg-red-50 transition-colors font-medium cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] bg-white dark:bg-[#16181D] text-xs text-red-600 dark:text-red-400 hover:border-red-600 dark:hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-medium cursor-pointer"
                           >
                             Putuskan ({c.account_name.slice(0, 15)})
                           </button>
@@ -759,8 +759,8 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] shadow-xs flex flex-col gap-4">
-            <p className="text-xs text-[#4B5563] leading-relaxed">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] shadow-xs flex flex-col gap-4">
+            <p className="text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
               Memori pengetahuan produk dan gaya komunikasi resmi bisnis Anda. Setiap penyesuaian di sini akan <strong>langsung dipelajari oleh Gemini AI</strong> saat membuat caption dan hook tanpa halusinasi. Klik kartu mana saja untuk mengeditnya.
             </p>
 
@@ -769,15 +769,15 @@ export function SettingsPage() {
                 <div
                   key={item.id}
                   onClick={() => handleOpenEditKnowledge(item)}
-                  className="group relative p-3.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] hover:border-black hover:bg-white transition-all flex flex-col gap-2 cursor-pointer shadow-2xs hover:shadow-xs"
+                  className="group relative p-3.5 rounded-lg bg-[#F9FAFB] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] hover:border-black dark:hover:border-white hover:bg-white dark:hover:bg-[#1C1E24] transition-all flex flex-col gap-2 cursor-pointer shadow-2xs hover:shadow-xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-black flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5">
                       {item.title}
                       <Edit3 size={11} className="opacity-0 group-hover:opacity-100 text-gray-500 transition-opacity" />
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-black text-white uppercase font-semibold">
+                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-black dark:bg-white text-white dark:text-black uppercase font-semibold">
                         {item.category}
                       </span>
                       <button
@@ -786,7 +786,7 @@ export function SettingsPage() {
                           e.stopPropagation()
                           handleDeleteKnowledge(item.id, item.title)
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-all cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-all cursor-pointer"
                         title="Hapus memori"
                       >
                         <Trash2 size={12} />
