@@ -351,7 +351,7 @@ async function initTarget(post, target) {
     logTag(target, 'info', `Simulating SUCCESS (Dry-Run Mode)`);
     await supabase.from('post_targets').update({
       status: 'SUCCESS',
-      remote_post_id: `sim-${Date.now()}-${target.platform}`,
+      external_post_id: `sim-${Date.now()}-${target.platform}`,
       executed_at: new Date().toISOString(),
       error_payload: {
         mode: 'SIMULATION_DEV_MODE',
