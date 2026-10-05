@@ -13,6 +13,7 @@ export function HistoryPage() {
   const navigate = useNavigate()
   const { setScheduledAt } = useComposerStore()
   const [targets, setTargets] = useState<any[]>([])
+  const [calendarTargets, setCalendarTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
   const [dateFilter, setDateFilter] = useState<string | null>(null)
@@ -27,17 +28,31 @@ export function HistoryPage() {
   async function loadData(isSilent = false) {
     if (!isSilent) setLoading(true)
     const tStart = performance.now()
-    const { data } = await supabase
-      .from('post_targets')
-      .select('*, posts(*), connected_accounts(account_name, platform)')
-      .order('updated_at', { ascending: false })
-      .range(0, PAGE_SIZE - 1)
+    
+    // Fetch paged data for list table + all targets for calendar (up to 200)
+    const [pagedRes, allRes] = await Promise.all([
+      supabase
+        .from('post_targets')
+        .select('*, posts(*), connected_accounts(account_name, platform)')
+        .order('updated_at', { ascending: false })
+        .range(0, PAGE_SIZE - 1),
+      supabase
+        .from('post_targets')
+        .select('*, posts(*), connected_accounts(account_name, platform)')
+        .order('updated_at', { ascending: false })
+        .limit(200),
+    ])
+
     const elapsed = Math.round(performance.now() - tStart)
     setNetworkLatency(elapsed > 0 ? elapsed : 118)
-    if (data) {
-      setTargets(data)
+
+    if (pagedRes.data) {
+      setTargets(pagedRes.data)
       setPage(0)
-      setHasMore(data.length >= PAGE_SIZE)
+      setHasMore(pagedRes.data.length >= PAGE_SIZE)
+    }
+    if (allRes.data) {
+      setCalendarTargets(allRes.data)
     }
     if (!isSilent) setLoading(false)
   }
@@ -189,10 +204,19 @@ export function HistoryPage() {
     return true
   })
 
-  const successCount = targets.filter((t) => t.status === 'SUCCESS').length
-  const pendingCount = targets.filter((t) => t.status === 'PENDING' || t.status === 'IN_PROGRESS').length
-  const failedCount = targets.filter((t) => t.status === 'FAILED').length
-  const successPct = targets.length > 0 ? ((successCount / targets.length) * 100).toFixed(1) : '100.0'
+  const filteredCalendarTargets = calendarTargets.filter((t) => {
+    let matchStatus = true
+    if (filterStatus === 'SUCCESS') matchStatus = t.status === 'SUCCESS'
+    else if (filterStatus === 'PENDING') matchStatus = t.status === 'PENDING' || t.status === 'IN_PROGRESS'
+    else if (filterStatus === 'FAILED') matchStatus = t.status === 'FAILED'
+    return matchStatus
+  })
+
+  const allTargetsPool = calendarTargets.length > 0 ? calendarTargets : targets
+  const successCount = allTargetsPool.filter((t) => t.status === 'SUCCESS').length
+  const pendingCount = allTargetsPool.filter((t) => t.status === 'PENDING' || t.status === 'IN_PROGRESS').length
+  const failedCount = allTargetsPool.filter((t) => t.status === 'FAILED').length
+  const successPct = allTargetsPool.length > 0 ? ((successCount / allTargetsPool.length) * 100).toFixed(1) : '100.0'
 
   function handleSelectDateToListView(dateStr: string) {
     setDateFilter(dateStr)
@@ -400,7 +424,7 @@ export function HistoryPage() {
       {viewMode === 'calendar' ? (
         <HistoryEventCalendar
           loading={loading}
-          targets={filteredTargets}
+          targets={filteredCalendarTargets}
           onSelectTarget={(t) => setSelectedTarget(t)}
           onRetry={retry}
           onDelete={deleteTarget}
