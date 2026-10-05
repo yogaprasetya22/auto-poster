@@ -50,18 +50,14 @@ export function NavMain() {
         <SidebarGroupContent className="mt-1">
           <SidebarMenu className="gap-1">
             <SidebarMenuItem>
-              <NavLink to="/" end>
-                {({ isActive }) => (
-                  <SidebarMenuButton
-                    tooltip="Dashboard Overview"
-                    isActive={isActive}
-                    className="w-full cursor-pointer rounded-lg font-medium text-xs h-9 px-3 transition-colors"
-                  >
-                    <LayoutDashboard className="size-4 shrink-0 text-muted-foreground group-data-active/menu-button:text-foreground" />
-                    <span>Dashboard</span>
-                  </SidebarMenuButton>
-                )}
-              </NavLink>
+              <SidebarMenuButton
+                render={<NavLink to="/" end />}
+                tooltip="Dashboard Overview"
+                className="w-full cursor-pointer rounded-lg font-medium text-xs h-9 px-3 transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+              >
+                <LayoutDashboard className="size-4 shrink-0 text-muted-foreground group-data-active/menu-button:text-foreground" />
+                <span>Dashboard</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
@@ -103,58 +99,46 @@ export function NavMain() {
                 <SidebarMenuSub className="mt-1 ml-4 pl-3 border-l-2 border-border/70 flex flex-col gap-1 py-1">
                   {/* Sub-item 1: Composer (Buat Konten) */}
                   <SidebarMenuSubItem>
-                    <NavLink to="/composer">
-                      {({ isActive }) => (
-                        <SidebarMenuSubButton
-                          isActive={isActive}
-                          className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <PenSquare className="size-3.5 shrink-0 text-muted-foreground" />
-                            <span>Composer</span>
-                          </div>
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
-                            AI
-                          </span>
-                        </SidebarMenuSubButton>
-                      )}
-                    </NavLink>
+                    <SidebarMenuSubButton
+                      render={<NavLink to="/composer" />}
+                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2">
+                        <PenSquare className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span>Composer</span>
+                      </div>
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+                        AI
+                      </span>
+                    </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
 
                   {/* Sub-item 2: Jadwal Konten */}
                   <SidebarMenuSubItem>
-                    <NavLink to="/schedule">
-                      {({ isActive }) => (
-                        <SidebarMenuSubButton
-                          isActive={isActive}
-                          className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <CalendarClock className="size-3.5 shrink-0 text-muted-foreground" />
-                            <span>Jadwal Tayang</span>
-                          </div>
-                          <span className="size-1.5 rounded-full bg-amber-500" />
-                        </SidebarMenuSubButton>
-                      )}
-                    </NavLink>
+                    <SidebarMenuSubButton
+                      render={<NavLink to="/schedule" />}
+                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span>Jadwal Tayang</span>
+                      </div>
+                      <span className="size-1.5 rounded-full bg-amber-500" />
+                    </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
 
                   {/* Sub-item 3: Riwayat Eksekusi */}
                   <SidebarMenuSubItem>
-                    <NavLink to="/history">
-                      {({ isActive }) => (
-                        <SidebarMenuSubButton
-                          isActive={isActive}
-                          className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <History className="size-3.5 shrink-0 text-muted-foreground" />
-                            <span>Riwayat / History</span>
-                          </div>
-                          <span className="text-[9px] font-mono text-muted-foreground">Log</span>
-                        </SidebarMenuSubButton>
-                      )}
-                    </NavLink>
+                    <SidebarMenuSubButton
+                      render={<NavLink to="/history" />}
+                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2">
+                        <History className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span>Riwayat / History</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-muted-foreground">Log</span>
+                    </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 </SidebarMenuSub>
               )}
@@ -171,18 +155,14 @@ export function NavMain() {
         <SidebarGroupContent className="mt-1">
           <SidebarMenu className="gap-1">
             <SidebarMenuItem>
-              <NavLink to="/settings">
-                {({ isActive }) => (
-                  <SidebarMenuButton
-                    tooltip="Pengaturan & Akun"
-                    isActive={isActive}
-                    className="w-full cursor-pointer rounded-lg font-medium text-xs h-9 px-3 transition-colors"
-                  >
-                    <Settings className="size-4 shrink-0 text-muted-foreground group-data-active/menu-button:text-foreground" />
-                    <span>Settings & Akun</span>
-                  </SidebarMenuButton>
-                )}
-              </NavLink>
+              <SidebarMenuButton
+                render={<NavLink to="/settings" />}
+                tooltip="Pengaturan & Akun"
+                className="w-full cursor-pointer rounded-lg font-medium text-xs h-9 px-3 transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+              >
+                <Settings className="size-4 shrink-0 text-muted-foreground group-data-active/menu-button:text-foreground" />
+                <span>Settings & Akun</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>

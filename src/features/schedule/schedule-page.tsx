@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { id } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
-import { Calendar } from '@/shared/components/ui/calendar'
+import { Calendar, CalendarDayButton } from '@/shared/components/ui/calendar'
 import {
   Popover,
   PopoverContent,
@@ -128,6 +128,17 @@ export function SchedulePage() {
       loadSchedules(true)
     }
   }
+
+  // Hitung jumlah postingan per tanggal (YYYY-MM-DD)
+  const dateTargetCountMap = useMemo(() => {
+    const counts = new Map<string, number>()
+    targets.forEach((t) => {
+      const iso = t.posts?.scheduled_at || t.created_at || new Date().toISOString()
+      const key = formatDateKey(iso)
+      counts.set(key, (counts.get(key) || 0) + 1)
+    })
+    return counts
+  }, [targets])
 
   // Filter status & date range
   const filteredTargets = useMemo(() => {
@@ -318,9 +329,32 @@ export function SchedulePage() {
                   defaultMonth={dateRange?.from}
                   selected={dateRange}
                   onSelect={setDateRange}
-                  numberOfMonths={2}
-                  className="rounded-lg border"
+                  numberOfMonths={1}
+                  captionLayout="dropdown"
+                  className="rounded-lg border [--cell-size:--spacing(10)] md:[--cell-size:--spacing(11)]"
+                  formatters={{
+                    formatMonthDropdown: (date) => {
+                      return date.toLocaleString("default", { month: "long" })
+                    },
+                  }}
                   locale={id}
+                  components={{
+                    DayButton: ({ children, modifiers, day, ...props }) => {
+                      const dateKey = formatDateKey(day.date.toISOString())
+                      const count = dateTargetCountMap.get(dateKey) || 0
+
+                      return (
+                        <CalendarDayButton day={day} modifiers={modifiers} {...props}>
+                          <span className="text-xs font-medium leading-none">{children}</span>
+                          {!modifiers.outside && count > 0 && (
+                            <span className="text-[9px] font-mono font-bold leading-none px-1 py-0.5 rounded-full bg-black/10 dark:bg-white/20 text-foreground dark:text-white group-data-[selected-single=true]/day:bg-white/30 group-data-[range-start=true]/day:bg-white/30 group-data-[range-end=true]/day:bg-white/30">
+                              {count}p
+                            </span>
+                          )}
+                        </CalendarDayButton>
+                      )
+                    },
+                  }}
                 />
               </div>
             </PopoverContent>
