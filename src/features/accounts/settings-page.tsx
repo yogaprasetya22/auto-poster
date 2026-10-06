@@ -487,321 +487,228 @@ export function SettingsPage() {
     window.location.href = '/api/auth/meta-login'
   }
 
-  // Calculate dynamic storage proxy stats
-  const estimatedStorageMB = (totalPostsCount * 12.5).toFixed(1)
-  const quotaHealthPercent = Math.max(10, Math.min(100, 100 - accounts.length * 2))
+  // Tab Navigasi Sederhana
+  const [activeTab, setActiveTab] = useState<'accounts' | 'knowledge'>('accounts')
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-10">
-      {/* Top Action Bar & Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white">Pengaturan & Koneksi Akun</h1>
-            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] text-black dark:text-white font-semibold">
-              OAUTH 2.0 PROTOCOL
-            </span>
-          </div>
-          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-            Hubungkan akun media sosial Anda secara otomatis via 1-Click OAuth dan kelola proxy transmisi storage engine.
+    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto pb-12">
+      {/* Header Bersih & Ringkas */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Pengaturan</h1>
+          <p className="text-xs text-muted-foreground">
+            Kelola integrasi akun media sosial dan panduan pengetahuan brand untuk asisten AI.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Tab Switcher Minimalis */}
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary border border-border self-start sm:self-auto">
           <button
             type="button"
-            onClick={handleMetaConnect}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-black text-white text-xs font-semibold hover:bg-[#262626] transition-all shadow-xs cursor-pointer"
+            onClick={() => setActiveTab('accounts')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+              activeTab === 'accounts'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <span className="material-symbols-outlined text-[16px]">bolt</span>
-            <span>Auto-Connect Meta (IG & FB)</span>
-            <kbd className="font-mono text-[10px] px-1 py-0.2 rounded bg-[#333] text-white">⌘M</kbd>
+            Akun Terhubung ({accounts.length})
           </button>
-
           <button
             type="button"
-            onClick={loadAccounts}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-white dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.1)] text-black dark:text-white text-xs font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#262933] transition-colors cursor-pointer"
+            onClick={() => setActiveTab('knowledge')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+              activeTab === 'knowledge'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
-            <span>Refresh</span>
+            Memori AI ({knowledgeList.length})
           </button>
         </div>
       </div>
 
-      {/* 4-Bento Telemetry Cards (100% Dynamic) */}
-      <SkeletonContainer isLoading={loading}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
-            <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Channels Online</span>
-              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
-                {accounts.length} <span className="text-xs font-normal text-[#6B7280] dark:text-[#9CA3AF]">/ 4 Platform</span>
-              </span>
+      {/* Konten Tab 1: Akun Media Sosial */}
+      {activeTab === 'accounts' && (
+        <SkeletonContainer isLoading={loading}>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 rounded-xl bg-card border border-border">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-semibold text-foreground">Koneksi Otomatis Meta</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Hubungkan akun Instagram Creator/Business dan Facebook Page sekaligus dalam 1 klik.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleMetaConnect}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-[16px]">bolt</span>
+                <span>Hubungkan Meta</span>
+              </button>
             </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
-              <span className="material-symbols-outlined text-[20px]">hub</span>
-            </div>
-          </div>
 
-          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
-            <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Total Pipeline Quota</span>
-              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
-                {quotaHealthPercent}% <span className="text-xs font-medium text-black dark:text-white">Healthy</span>
-              </span>
-            </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
-              <span className="material-symbols-outlined text-[20px]">data_saver_on</span>
-            </div>
-          </div>
+            {/* List Platform */}
+            <div className="flex flex-col gap-3">
+              {SUPPORTED_PLATFORMS.map((platform) => {
+                const connected = accounts.filter((a) => a.platform === platform.key)
+                const isConnected = connected.length > 0
+                const hasExpired = connected.some(
+                  (a) => a.token_expires_at && new Date(a.token_expires_at).getTime() < Date.now()
+                )
 
-          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
-            <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Edge Engine Latency</span>
-              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
-                {systemLatency} ms <span className="text-xs font-medium text-black dark:text-white">live</span>
-              </span>
-            </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
-              <span className="material-symbols-outlined text-[20px]">speed</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-between shadow-xs">
-            <div className="flex flex-col">
-              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Storage Proxy Data</span>
-              <span className="text-2xl font-bold font-mono text-black dark:text-white mt-0.5">
-                {estimatedStorageMB} MB <span className="text-xs font-normal text-[#6B7280] dark:text-[#9CA3AF]">Active</span>
-              </span>
-            </div>
-            <div className="size-9 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center text-black dark:text-white">
-              <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
-            </div>
-          </div>
-        </div>
-      </SkeletonContainer>
-
-      {/* Social Platforms Row List */}
-      <SkeletonContainer isLoading={loading}>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-black dark:text-white">dynamic_feed</span>
-              <h2 className="text-sm font-semibold text-black dark:text-white">Platform Sosial Media Terhubung</h2>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#1C1E24] text-black dark:text-white border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
-                {accounts.length} Akun Aktif
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-              <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-black dark:bg-white"></span> Active</span>
-              <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-white dark:bg-black border border-black dark:border-white"></span> Disconnected</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {SUPPORTED_PLATFORMS.map((platform) => {
-              const connected = accounts.filter((a) => a.platform === platform.key)
-              const isConnected = connected.length > 0
-              const hasExpired = connected.some((a) => a.token_expires_at && new Date(a.token_expires_at).getTime() < Date.now())
-
-              return (
-                <div
-                  key={platform.key}
-                  className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] hover:border-black dark:hover:border-white transition-all shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-                >
-                  <div className="flex items-start md:items-center gap-4 min-w-0">
-                    <div className="relative shrink-0">
-                      <div className="size-12 rounded-xl bg-[#F3F4F6] dark:bg-[#1C1E24] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] flex items-center justify-center overflow-hidden">
-                        <span className="material-symbols-outlined text-[24px] text-black dark:text-white">{platform.iconName}</span>
+                return (
+                  <div
+                    key={platform.key}
+                    className="p-4 rounded-xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="relative shrink-0">
+                        <div className="size-11 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                          <span className="material-symbols-outlined text-[22px] text-foreground">
+                            {platform.iconName}
+                          </span>
+                        </div>
+                        {isConnected && (
+                          <span
+                            className={`absolute -bottom-1 -right-1 size-3.5 rounded-full flex items-center justify-center text-white ${
+                              hasExpired ? 'bg-amber-500' : 'bg-emerald-600'
+                            }`}
+                          >
+                            {hasExpired ? (
+                              <AlertTriangle size={8} strokeWidth={2.5} />
+                            ) : (
+                              <Check size={8} strokeWidth={3} />
+                            )}
+                          </span>
+                        )}
                       </div>
-                      {isConnected && (
-                        <span className={`absolute -bottom-1 -right-1 size-4 rounded-full flex items-center justify-center text-white ${
-                          hasExpired ? 'bg-amber-500' : 'bg-emerald-600'
-                        }`}>
-                          {hasExpired ? (
-                            <AlertTriangle size={10} strokeWidth={2.5} />
-                          ) : (
-                            <Check size={10} strokeWidth={3} />
-                          )}
+
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-foreground">{platform.name}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {platform.badge}
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {isConnected
+                            ? connected.map((c) => c.account_name).join(', ')
+                            : 'Belum ada akun yang terhubung'}
                         </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      {isConnected ? (
+                        <div className="flex items-center gap-2">
+                          {hasExpired && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (platform.key === 'tiktok') window.location.href = '/api/auth/tiktok-login'
+                                else handleMetaConnect()
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 transition-colors cursor-pointer"
+                            >
+                              Login Ulang
+                            </button>
+                          )}
+                          {connected.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => handleDisconnect(c.id, c.account_name)}
+                              className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                            >
+                              Putuskan
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (platform.key === 'tiktok') window.location.href = '/api/auth/tiktok-login'
+                            else setActivePlatformModal(platform.key)
+                          }}
+                          className="px-3 py-1.5 rounded-lg border border-border bg-secondary text-foreground text-xs font-medium hover:bg-accent transition-colors cursor-pointer"
+                        >
+                          Hubungkan
+                        </button>
                       )}
                     </div>
-
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-bold text-black">{platform.name}</span>
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-black text-white font-semibold">
-                          {platform.badge}
-                        </span>
-                        {isConnected ? (
-                          <span className="text-xs text-[#6B7280] font-mono truncate">
-                            {connected.map((c) => c.account_name).join(', ')}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[#9CA3AF] italic">Belum terhubung</span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                          !isConnected
-                            ? 'bg-white border-[#E5E7EB] text-[#6B7280]'
-                            : hasExpired
-                            ? 'bg-amber-50 border-amber-200 text-amber-700'
-                            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        }`}>
-                          <span className={`size-1.5 rounded-full ${
-                            !isConnected
-                              ? 'bg-transparent border border-black'
-                              : hasExpired
-                              ? 'bg-amber-500'
-                              : 'bg-emerald-600'
-                          }`}></span>
-                          {!isConnected
-                            ? 'Membutuhkan Autentikasi'
-                            : hasExpired
-                            ? 'Token Kedaluwarsa (Perlu Login Ulang)'
-                            : `${connected.length} Akun Terhubung & Aktif`}
-                        </span>
-                        <span className="text-xs text-[#6B7280] hidden sm:inline">
-                          • {platform.capabilities}
-                        </span>
-                      </div>
-                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2 self-end lg:self-center shrink-0">
-                    {isConnected ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Tombol Reconnect HANYA tampil jika token benar-benar expired */}
-                        {hasExpired && platform.key === 'tiktok' && (
-                          <button
-                            type="button"
-                            onClick={() => { window.location.href = '/api/auth/tiktok-login' }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition-colors cursor-pointer shadow-2xs"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">sync</span>
-                            <span>Login Ulang TikTok</span>
-                          </button>
-                        )}
-                        {hasExpired && platform.key === 'instagram' && (
-                          <button
-                            type="button"
-                            onClick={handleMetaConnect}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition-colors cursor-pointer shadow-2xs"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">sync</span>
-                            <span>Login Ulang Meta</span>
-                          </button>
-                        )}
-                        {connected.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => handleDisconnect(c.id, c.account_name)}
-                            className="px-3 py-1.5 rounded-lg border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] bg-white dark:bg-[#16181D] text-xs text-red-600 dark:text-red-400 hover:border-red-600 dark:hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-medium cursor-pointer"
-                          >
-                            Putuskan ({c.account_name.slice(0, 15)})
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {platform.key === 'tiktok' ? (
-                          <button
-                            type="button"
-                            onClick={() => { window.location.href = '/api/auth/tiktok-login' }}
-                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-black text-white text-xs font-semibold hover:bg-[#262626] transition-colors cursor-pointer shadow-xs"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">bolt</span>
-                            <span>Hubungkan TikTok (1-Click OAuth)</span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setActivePlatformModal(platform.key)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-medium hover:bg-[#262626] transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">link</span>
-                            <span>Hubungkan Akun</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* AI Brand Tuning & Knowledge Base Section */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-black dark:text-white">psychology</span>
-              <h2 className="text-sm font-semibold text-black dark:text-white uppercase tracking-wider font-mono">
-                AI Brand Tuning & Knowledge Memory
-              </h2>
+                )
+              })}
             </div>
-            <div className="flex items-center gap-2">
+          </div>
+        </SkeletonContainer>
+      )}
+
+      {/* Konten Tab 2: AI Knowledge Memory */}
+      {activeTab === 'knowledge' && (
+        <SkeletonContainer isLoading={loading}>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Panduan Pengetahuan AI</h2>
+                <p className="text-xs text-muted-foreground">
+                  Informasi produk dan aturan brand yang dipakai AI saat membuat konten.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={handleOpenCreateKnowledge}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-black text-white hover:bg-[#262626] text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
               >
-                <Plus size={13} />
-                <span>Tambah Pengetahuan</span>
+                <Plus size={14} />
+                <span>Tambah Data</span>
               </button>
-              <span className="font-mono text-[10px] px-2 py-1 rounded bg-black text-white font-semibold">
-                SUPABASE CLOUD SYNC
-              </span>
             </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-[#111216] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] shadow-xs flex flex-col gap-4">
-            <p className="text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
-              Memori pengetahuan produk dan gaya komunikasi resmi bisnis Anda. Setiap penyesuaian di sini akan <strong>langsung dipelajari oleh Gemini AI</strong> saat membuat caption dan hook tanpa halusinasi. Klik kartu mana saja untuk mengeditnya.
-            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {knowledgeList.map((item: any) => (
                 <div
                   key={item.id}
                   onClick={() => handleOpenEditKnowledge(item)}
-                  className="group relative p-3.5 rounded-lg bg-[#F9FAFB] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)] hover:border-black dark:hover:border-white hover:bg-white dark:hover:bg-[#1C1E24] transition-all flex flex-col gap-2 cursor-pointer shadow-2xs hover:shadow-xs"
+                  className="group p-4 rounded-xl bg-card border border-border hover:border-foreground/30 transition-all flex flex-col justify-between gap-3 cursor-pointer"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5">
-                      {item.title}
-                      <Edit3 size={11} className="opacity-0 group-hover:opacity-100 text-gray-500 transition-opacity" />
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-black dark:bg-white text-white dark:text-black uppercase font-semibold">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground">{item.title}</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase">
                         {item.category}
                       </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteKnowledge(item.id, item.title)
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-all cursor-pointer"
-                        title="Hapus memori"
-                      >
-                        <Trash2 size={12} />
-                      </button>
                     </div>
+                    <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed">
+                      {item.content}
+                    </p>
                   </div>
-                  <div className="text-[11px] text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed max-h-28 overflow-hidden pointer-events-none">
-                    {renderCleanMarkdown(item.content)}
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1 group-hover:text-foreground transition-colors">
+                      <Edit3 size={11} /> Edit
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteKnowledge(item.id, item.title)
+                      }}
+                      className="p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      title="Hapus"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </SkeletonContainer>
+        </SkeletonContainer>
+      )}
 
       {/* Drawer Editor AI Brand Tuning & Knowledge (max-w-5xl) */}
       <Drawer open={isKnowledgeDrawerOpen} onOpenChange={setIsKnowledgeDrawerOpen}>

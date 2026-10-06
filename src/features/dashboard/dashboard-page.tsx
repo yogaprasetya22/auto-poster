@@ -179,24 +179,19 @@ export function DashboardPage() {
   }, [allTargets])
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-8">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-10">
       {/* Top Action Bar & Page Meta */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[#27272A]">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white font-sans">Dashboard Overview</h1>
-            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-black dark:bg-white text-white dark:text-black font-semibold tracking-wider">
-              LIVE SYNC
-            </span>
-          </div>
-          <p className="text-xs text-[#6B7280]">
-            Metrik agregat distribusi multi-platform real-time dan status antrean aktif engine.
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-xs text-muted-foreground">
+            Ringkasan status distribusi konten otomatis dan jadwal penayangan hari ini.
           </p>
         </div>
 
         {/* Timeframe Controls & Quick Actions */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] p-0.5 rounded-lg shadow-xs">
+          <div className="flex items-center bg-secondary border border-border p-0.5 rounded-lg">
             {(['24h', '7d', '30d', 'month'] as const).map((t) => {
               const labelMap = { '24h': '24 Jam', '7d': '7 Hari', '30d': '30 Hari', 'month': 'Bulan Ini' }
               const active = selectedTimeframe === t
@@ -207,8 +202,8 @@ export function DashboardPage() {
                   onClick={() => setSelectedTimeframe(t)}
                   className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                     active
-                      ? 'bg-black dark:bg-white text-white dark:text-black font-semibold shadow-xs'
-                      : 'text-[#6B7280] hover:text-black dark:hover:text-white font-medium'
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {labelMap[t]}
@@ -220,22 +215,18 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => loadData(false)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] text-[#374151] dark:text-gray-300 hover:text-black dark:hover:text-white hover:border-black dark:hover:border-white transition-all shadow-xs text-xs font-medium cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-foreground hover:bg-muted transition-colors text-xs font-medium cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
-            <span>Refresh</span>
-            <kbd className="font-mono text-[10px] px-1 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] text-[#6B7280] border border-[#E5E7EB] dark:border-[#3F3F46]">
-              ⌘R
-            </kbd>
+            <span className="material-symbols-outlined text-[15px]">refresh</span>
+            <span>Muat Ulang</span>
           </button>
 
           <Link
             to="/composer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs hover:bg-[#262626] transition-all shadow-xs font-medium"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs hover:opacity-90 transition-opacity font-semibold shadow-xs"
           >
-            <span className="material-symbols-outlined text-[16px]">add</span>
+            <span className="material-symbols-outlined text-[15px]">add</span>
             <span>Buat Postingan</span>
-            <kbd className="font-mono text-[10px] px-1 py-0.5 rounded bg-[#262626] dark:bg-[#E5E7EB] text-white dark:text-black">C</kbd>
           </Link>
         </div>
       </div>

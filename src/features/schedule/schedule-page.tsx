@@ -199,18 +199,13 @@ export function SchedulePage() {
   const failedCount = targets.filter((t) => t.status === 'FAILED').length
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-10">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
       {/* Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[#27272A]">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white">Jadwal Postingan</h1>
-            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46] text-black dark:text-white font-semibold">
-              TIMELINE VIDEO CARD
-            </span>
-          </div>
-          <p className="text-xs text-[#6B7280]">
-            Katalog visual video feed yang dijadwalkan, dikelompokkan rapi per tanggal dan jam penayangan.
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Jadwal Postingan</h1>
+          <p className="text-xs text-muted-foreground">
+            Daftar konten terjadwal yang siap ditayangkan otomatis per tanggal dan jam.
           </p>
         </div>
 
@@ -218,71 +213,71 @@ export function SchedulePage() {
           <button
             type="button"
             onClick={() => loadSchedules(false)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] text-black dark:text-white text-xs font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#27272A] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer"
           >
             <RefreshCw size={13} />
-            <span>Reload</span>
+            <span>Muat Ulang</span>
           </button>
           <button
             type="button"
             onClick={() => navigate('/composer')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-medium hover:bg-[#262626] transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity shadow-xs cursor-pointer"
           >
             <Plus size={14} />
-            <span>Buat Jadwal Baru</span>
+            <span>Buat Jadwal</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Tabs Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] p-2 rounded-xl shadow-xs">
-        <div className="flex flex-wrap items-center gap-1.5">
+      {/* Filter Tabs & Date Navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border p-2 rounded-xl shadow-xs">
+        <div className="flex flex-wrap items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border/40">
           <button
             type="button"
             onClick={() => setFilterStatus('ALL')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'ALL'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Semua <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-[#27272A] text-white text-[10px]">{targets.length}</span>
+            Semua ({targets.length})
           </button>
 
           <button
             type="button"
             onClick={() => setFilterStatus('PENDING')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'PENDING'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Dalam Antrean <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{pendingCount}</span>
+            Antrean ({pendingCount})
           </button>
 
           <button
             type="button"
             onClick={() => setFilterStatus('SUCCESS')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'SUCCESS'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Sudah Terbit <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{successCount}</span>
+            Terbit ({successCount})
           </button>
 
           <button
             type="button"
             onClick={() => setFilterStatus('FAILED')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'FAILED'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Gagal <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-red-600 text-white text-[10px]">{failedCount}</span>
+            Gagal ({failedCount})
           </button>
         </div>
 
@@ -388,24 +383,24 @@ export function SchedulePage() {
       {/* Main Content Area */}
       {loading ? (
         <div className="flex flex-col items-center justify-center p-16 gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent dark:border-white dark:border-t-transparent" />
-          <span className="font-mono text-xs text-[#6B7280]">Memuat card timeline postingan...</span>
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="font-mono text-xs text-muted-foreground">Memuat timeline jadwal postingan...</span>
         </div>
       ) : groupedByDate.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-16 bg-white dark:bg-[#18181B] rounded-2xl border border-[#E5E7EB] dark:border-[#27272A] text-center gap-3">
-          <div className="size-12 rounded-full bg-[#F3F4F6] dark:bg-[#27272A] flex items-center justify-center text-[#6B7280]">
+        <div className="flex flex-col items-center justify-center p-16 bg-card rounded-2xl border border-border text-center gap-3">
+          <div className="size-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
             <Film size={22} />
           </div>
           <div className="flex flex-col gap-1 max-w-sm">
-            <h3 className="text-sm font-semibold text-black dark:text-white">Belum Ada Video Terjadwal</h3>
-            <p className="text-xs text-[#6B7280]">
+            <h3 className="text-sm font-semibold text-foreground">Belum Ada Video Terjadwal</h3>
+            <p className="text-xs text-muted-foreground">
               Mulai buat konten baru di menu Composer untuk menjadwalkan video ke TikTok, Instagram, Facebook, dan Threads.
             </p>
           </div>
           <button
             type="button"
             onClick={() => navigate('/composer')}
-            className="mt-2 px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-semibold hover:bg-neutral-800 transition-colors cursor-pointer"
+            className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
           >
             Buka Composer
           </button>
@@ -415,17 +410,17 @@ export function SchedulePage() {
           {groupedByDate.map((group) => (
             <section key={group.dateKey} className="flex flex-col gap-4">
               {/* Sticky Date Header */}
-              <div className="sticky top-0 z-10 flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/90 dark:bg-[#18181B]/90 backdrop-blur-md border border-[#E5E7EB] dark:border-[#27272A] shadow-xs">
+              <div className="sticky top-0 z-10 flex items-center justify-between py-2 px-3.5 rounded-xl bg-card/90 backdrop-blur-md border border-border shadow-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="size-7 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center">
-                    <CalendarDays size={14} />
+                  <div className="size-6 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
+                    <CalendarDays size={13} />
                   </div>
-                  <h2 className="text-sm font-bold text-black dark:text-white tracking-tight">
+                  <h2 className="text-xs font-bold text-foreground tracking-tight">
                     {group.header}
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-[#F3F4F6] dark:bg-[#27272A] text-[#6B7280] font-medium border border-[#E5E7EB] dark:border-[#3F3F46]">
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium border border-border/60">
                     {group.items.length} Postingan
                   </span>
                 </div>
@@ -444,7 +439,7 @@ export function SchedulePage() {
                     <div
                       key={t.id}
                       onClick={() => setSelectedTarget(t)}
-                      className="group relative flex flex-col bg-white dark:bg-[#18181B] rounded-2xl border border-[#E5E7EB] dark:border-[#27272A] overflow-hidden shadow-xs hover:shadow-md hover:border-black dark:hover:border-white transition-all cursor-pointer"
+                      className="group relative flex flex-col bg-card rounded-2xl border border-border overflow-hidden shadow-xs hover:border-foreground/30 transition-all cursor-pointer"
                     >
                       {/* Video / Thumbnail Canvas Container (9:16 Aspect Preview) */}
                       <div className="relative w-full aspect-9/16 bg-black flex items-center justify-center overflow-hidden">
@@ -523,22 +518,22 @@ export function SchedulePage() {
 
                       {/* Card Bottom Meta */}
                       <div className="p-3 flex flex-col gap-1.5 justify-between flex-1">
-                        <h4 className="text-xs font-semibold text-black dark:text-white line-clamp-2 leading-snug">
+                        <h4 className="text-xs font-semibold text-foreground line-clamp-2 leading-snug">
                           {title}
                         </h4>
 
                         {t.posts?.content_text && (
-                          <p className="text-[11px] text-[#6B7280] line-clamp-2 leading-relaxed">
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
                             {t.posts.content_text}
                           </p>
                         )}
 
-                        <div className="pt-2 mt-auto border-t border-[#F3F4F6] dark:border-[#27272A] flex items-center justify-between text-[10px] text-[#6B7280] font-mono">
+                        <div className="pt-2 mt-auto border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
                           <span className="flex items-center gap-1">
-                            <Sparkles size={11} className="text-purple-500" />
+                            <Sparkles size={11} className="text-foreground" />
                             <span>Detail Inspeksi</span>
                           </span>
-                          <span className="group-hover:translate-x-0.5 transition-transform">
+                          <span className="group-hover:translate-x-0.5 transition-transform text-foreground">
                             Lihat &rarr;
                           </span>
                         </div>
