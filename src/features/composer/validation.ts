@@ -33,6 +33,7 @@ export const composerFormSchema = z
       .max(5000, 'Caption konten maksimal 5000 karakter'),
     mediaType: z.enum(['TEXT', 'IMAGE', 'VIDEO']),
     media: mediaAssetSchema.nullable().optional(),
+    mediaItems: z.array(mediaAssetSchema).optional(),
     targetAccounts: z
       .array(
         z.object({
@@ -48,17 +49,18 @@ export const composerFormSchema = z
   })
   .superRefine((data, ctx) => {
     const selectedPlatforms = new Set(data.targetAccounts.map((a) => a.platform));
+    const items = data.mediaItems?.length ? data.mediaItems : data.media ? [data.media] : [];
 
     // Validasi TikTok
     if (selectedPlatforms.has('tiktok')) {
-      if (data.mediaType !== 'VIDEO' || !data.media) {
+      if (items.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['media'],
-          message: 'TikTok mewajibkan format media berupa VIDEO (tidak bisa teks/gambar saja).',
+          message: 'TikTok mewajibkan media (Video atau Gambar Foto). Tidak bisa teks saja.',
         });
-      } else {
-        const dur = data.media.durationSeconds;
+      } else if (data.mediaType === 'VIDEO') {
+        const dur = data.media?.durationSeconds;
         if (dur !== undefined && (dur < 3 || dur > 600)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -66,26 +68,32 @@ export const composerFormSchema = z
             message: `Durasi video untuk TikTok harus antara 3 hingga 600 detik (durasi saat ini: ${dur.toFixed(1)}s).`,
           });
         }
-        if (data.contentText.length > 2200) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['contentText'],
-            message: 'Panjang caption untuk TikTok maksimal 2.200 karakter.',
-          });
-        }
+      }
+      if (data.contentText.length > 2200) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['contentText'],
+          message: 'Panjang caption untuk TikTok maksimal 2.200 karakter.',
+        });
       }
     }
 
     // Validasi Instagram
     if (selectedPlatforms.has('instagram')) {
-      if (data.mediaType === 'TEXT' || !data.media) {
+      if (data.mediaType === 'TEXT' || items.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['media'],
-          message: 'Instagram mewajibkan konten visual (Foto atau Video Reels). Tidak mendukung teks saja.',
+          message: 'Instagram mewajibkan konten visual (Foto, Carousel Slide, atau Video Reels).',
+        });
+      } else if (items.length > 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['media'],
+          message: 'Instagram Carousel maksimal 10 foto/video per postingan.',
         });
       } else if (data.mediaType === 'VIDEO') {
-        const dur = data.media.durationSeconds;
+        const dur = data.media?.durationSeconds;
         if (dur !== undefined && dur < 3) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,

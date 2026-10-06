@@ -17,67 +17,29 @@ export function HistoryPage() {
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
   const [dateFilter, setDateFilter] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('list')
   const [networkLatency, setNetworkLatency] = useState<number>(118)
   const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
-  const [page, setPage] = useState<number>(0)
-  const [hasMore, setHasMore] = useState<boolean>(true)
-  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false)
-  const PAGE_SIZE = 10
 
   async function loadData(isSilent = false) {
     if (!isSilent) setLoading(true)
     const tStart = performance.now()
     
-    // Fetch paged data for list table + all targets for calendar (up to 200)
-    const [pagedRes, allRes] = await Promise.all([
-      supabase
-        .from('post_targets')
-        .select('*, posts(*), connected_accounts(account_name, platform)')
-        .order('updated_at', { ascending: false })
-        .range(0, PAGE_SIZE - 1),
-      supabase
-        .from('post_targets')
-        .select('*, posts(*), connected_accounts(account_name, platform)')
-        .order('updated_at', { ascending: false })
-        .limit(200),
-    ])
-
-    const elapsed = Math.round(performance.now() - tStart)
-    setNetworkLatency(elapsed > 0 ? elapsed : 118)
-
-    if (pagedRes.data) {
-      setTargets(pagedRes.data)
-      setPage(0)
-      setHasMore(pagedRes.data.length >= PAGE_SIZE)
-    }
-    if (allRes.data) {
-      setCalendarTargets(allRes.data)
-    }
-    if (!isSilent) setLoading(false)
-  }
-
-  async function loadMoreTargets() {
-    if (isLoadingMore || !hasMore) return
-    setIsLoadingMore(true)
-    const nextPage = page + 1
-    const from = nextPage * PAGE_SIZE
-    const to = from + PAGE_SIZE - 1
-
+    // Fetch riwayat postingan untuk tabel dan kalender
     const { data } = await supabase
       .from('post_targets')
       .select('*, posts(*), connected_accounts(account_name, platform)')
       .order('updated_at', { ascending: false })
-      .range(from, to)
+      .limit(300)
 
-    if (data && data.length > 0) {
-      setTargets((prev) => [...prev, ...data])
-      setPage(nextPage)
-      setHasMore(data.length >= PAGE_SIZE)
-    } else {
-      setHasMore(false)
+    const elapsed = Math.round(performance.now() - tStart)
+    setNetworkLatency(elapsed > 0 ? elapsed : 118)
+
+    if (data) {
+      setTargets(data)
+      setCalendarTargets(data)
     }
-    setIsLoadingMore(false)
+    if (!isSilent) setLoading(false)
   }
 
   useEffect(() => {
@@ -126,7 +88,6 @@ export function HistoryPage() {
     } else {
       toast.success('Target direset ke PENDING, engine akan segera mengeksekusi ulang!')
       loadData(true)
-      // Trigger fast worker run
       fetch('/api/cron/dispatcher').catch(() => {})
     }
   }
@@ -142,7 +103,6 @@ export function HistoryPage() {
       loadData(true)
     }
   }
-
 
   async function retryAllFailed() {
     const failedIds = targets.filter((t) => t.status === 'FAILED').map((t) => t.id)
@@ -183,7 +143,6 @@ export function HistoryPage() {
   const targetsToFilter = dateFilter ? (calendarTargets.length > 0 ? calendarTargets : targets) : targets
 
   const filteredTargets = targetsToFilter.filter((t) => {
-    // Filter status
     let matchStatus = true
     if (filterStatus === 'SUCCESS') matchStatus = t.status === 'SUCCESS'
     else if (filterStatus === 'PENDING') matchStatus = t.status === 'PENDING' || t.status === 'IN_PROGRESS'
@@ -191,7 +150,6 @@ export function HistoryPage() {
 
     if (!matchStatus) return false
 
-    // Filter tanggal spesifik (jika dialihkan dari kalender)
     if (dateFilter) {
       const dateIso = t.posts?.scheduled_at || t.created_at
       if (!dateIso) return false
@@ -227,7 +185,6 @@ export function HistoryPage() {
   }
 
   function handleDateClickCreate(dateStr: string) {
-    // Format YYYY-MM-DDTHH:mm (default jam 10:00 jika belum dipilih jam)
     const currentHour = new Date().getHours()
     const nextHour = String((currentHour + 1) % 24).padStart(2, '0')
     const scheduledDateTime = `${dateStr}T${nextHour}:00`
@@ -238,18 +195,13 @@ export function HistoryPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-10">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
       {/* Top Header & Page Meta */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB] dark:border-[#27272A]">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-black dark:text-white">Riwayat Eksekusi</h1>
-            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46] text-black dark:text-white font-semibold">
-              LIVE REALTIME • {networkLatency}ms
-            </span>
-          </div>
-          <p className="text-xs text-[#6B7280]">
-            Pantau status antrian real-time, inspect mockup simulator smartphone 9:16, dan kelola log hasil posting.
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Riwayat Eksekusi</h1>
+          <p className="text-xs text-muted-foreground">
+            Daftar lengkap status penerbitan konten, respon API sosial media, dan penanganan error.
           </p>
         </div>
 
@@ -258,30 +210,29 @@ export function HistoryPage() {
             <button
               type="button"
               onClick={retryAllFailed}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition-colors cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer"
             >
               <RotateCcw size={13} />
-              <span>Retry Semua Gagal ({failedCount})</span>
+              <span>Retry Gagal ({failedCount})</span>
             </button>
           )}
-
 
           <button
             type="button"
             onClick={() => loadData(false)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] text-black dark:text-white text-xs font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#27272A] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer"
           >
             <RefreshCw size={13} />
-            <span>Reload</span>
+            <span>Muat Ulang</span>
           </button>
 
           <button
             type="button"
             onClick={triggerDispatcher}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-medium hover:bg-[#262626] transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity shadow-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[15px]">sync</span>
-            <span>Jalankan Antrean Sekarang</span>
+            <span>Jalankan Antrean</span>
           </button>
         </div>
       </div>
@@ -298,92 +249,86 @@ export function HistoryPage() {
       />
 
       {/* Filter Tabs Navigation & View Mode Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#18181B] border border-[#E5E7EB] dark:border-[#27272A] p-2 rounded-xl shadow-xs">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border p-2 rounded-xl shadow-xs">
+        <div className="flex flex-wrap items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border/40">
           <button
             type="button"
             onClick={() => setFilterStatus('ALL')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'ALL'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Semua <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-[#27272A] text-white text-[10px]">{targets.length}</span>
+            Semua ({targets.length})
           </button>
 
           <button
             type="button"
             onClick={() => setFilterStatus('SUCCESS')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'SUCCESS'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Sukses <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{successCount}</span>
+            Sukses ({successCount})
           </button>
 
           <button
             type="button"
             onClick={() => setFilterStatus('PENDING')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'PENDING'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Dalam Antrean <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-white dark:bg-[#121212] text-black dark:text-white border border-[#E5E7EB] dark:border-[#27272A] text-[10px]">{pendingCount}</span>
+            Antrean ({pendingCount})
           </button>
 
           <button
             type="button"
             onClick={() => setFilterStatus('FAILED')}
-            className={`px-3 py-1.5 rounded text-xs transition-colors font-medium border border-[#E5E7EB] dark:border-[#27272A] cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
               filterStatus === 'FAILED'
-                ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                : 'text-[#4B5563] dark:text-gray-300 bg-[#F8F9FA] dark:bg-[#27272A] hover:bg-[#F3F4F6]'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Gagal / Perlu Retry <span className="font-mono ml-1 px-1.5 py-0.2 rounded bg-red-600 text-white text-[10px]">{failedCount}</span>
+            Gagal ({failedCount})
           </button>
         </div>
 
-        {/* View Mode Toggle: Event Calendar vs List Table */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#F3F4F6] dark:bg-[#27272A] border border-[#E5E7EB] dark:border-[#3F3F46]">
-            <button
-              type="button"
-              onClick={() => {
-                setViewMode('calendar')
-                setDateFilter(null)
-              }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'calendar'
-                  ? 'bg-white dark:bg-[#18181B] text-black dark:text-white shadow-2xs'
-                  : 'text-[#6B7280] hover:text-black dark:hover:text-white'
-              }`}
-            >
-              <CalendarIcon size={13} />
-              <span>Event Calendar</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-white dark:bg-[#18181B] text-black dark:text-white shadow-2xs'
-                  : 'text-[#6B7280] hover:text-black dark:hover:text-white'
-              }`}
-            >
-              <List size={13} />
-              <span>Tabel List</span>
-            </button>
-          </div>
-
-          <span className="font-mono text-[10px] text-[#6B7280] hidden sm:inline-block">
-            HEARTBEAT 10s ACTIVE
-          </span>
+        {/* View Mode Toggle: List Table vs Event Calendar */}
+        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border/40">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+              viewMode === 'list'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <List size={13} />
+            <span>Tabel</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('calendar')
+              setDateFilter(null)
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+              viewMode === 'calendar'
+                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <CalendarIcon size={13} />
+            <span>Kalender</span>
+          </button>
         </div>
       </div>
 
@@ -440,9 +385,7 @@ export function HistoryPage() {
           onSelectTarget={(t) => setSelectedTarget(t)}
           onRetry={retry}
           onDelete={deleteTarget}
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          onLoadMore={loadMoreTargets}
+          pageSize={10}
         />
       )}
 

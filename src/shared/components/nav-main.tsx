@@ -19,7 +19,6 @@ import {
   History,
   Settings,
   ChevronDown,
-  Sparkles,
 } from "lucide-react"
 
 export function NavMain() {

@@ -4,7 +4,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { ConnectPlatformModal } from './components/connect-platform-modal'
 import { toast } from 'sonner'
 import { SkeletonContainer } from '@/shared/components/ui/skeleton-container'
-import { Edit3, Plus, Trash2, X, Check, Loader2, Sparkles, Eye, Code, FileText, AlertTriangle } from 'lucide-react'
+import { Edit3, Plus, Trash2, X, Check, Loader2, Eye, Code, FileText, AlertTriangle } from 'lucide-react'
 import {
   Drawer,
   DrawerContent,
@@ -717,7 +717,7 @@ export function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-black text-white dark:bg-white dark:text-black">
-                  <Sparkles size={18} />
+                  <FileText size={18} />
                 </div>
                 <div className="text-left">
                   <DrawerTitle className="text-base font-bold text-black dark:text-white">

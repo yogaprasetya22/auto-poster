@@ -190,8 +190,80 @@ async function sweepOrphanedTransitVideos() {
 async function initInstagram(post, target, token, mediaUrl) {
   const isIgUserToken = token.startsWith('IGAA');
   const apiHost = isIgUserToken ? 'https://graph.instagram.com/v19.0' : 'https://graph.facebook.com/v19.0';
-  const bodyPayload = { caption: post.content_text, access_token: token };
+  const userId = target.connected_accounts.platform_user_id;
+  const galleryItems = post.media_metadata?.gallery_items || [];
   let transitPath = null;
+
+  // JIKA POSTINGAN BERUPA CAROUSEL / SLIDE (> 1 item)
+  if (galleryItems.length > 1) {
+    logTag(target, 'info', `Creating Instagram Carousel with ${galleryItems.length} items...`);
+    const childrenIds = [];
+
+    for (let i = 0; i < galleryItems.length; i++) {
+      const item = galleryItems[i];
+      const itemUrl = item.lh3_url || item.stream_url;
+      const isItemVideo = item.mime_type?.startsWith('video/');
+
+      const itemPayload = {
+        is_carousel_item: true,
+        access_token: token,
+      };
+
+      if (isItemVideo) {
+        itemPayload.media_type = 'VIDEO';
+        let rawVideoUrl = itemUrl;
+        if (item.file_id && !item.file_id.startsWith('local-')) {
+          rawVideoUrl = `https://drive.usercontent.google.com/download?id=${item.file_id}&export=download&confirm=t`;
+        }
+        itemPayload.video_url = rawVideoUrl;
+      } else {
+        itemPayload.image_url = itemUrl;
+      }
+
+      const itemRes = await fetch(`${apiHost}/${userId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(itemPayload),
+      });
+      const itemData = await itemRes.json();
+      if (!itemData.id) {
+        throw new Error(`Failed to create carousel item ${i + 1}: ${JSON.stringify(itemData.error || itemData)}`);
+      }
+      childrenIds.push(itemData.id);
+      logTag(target, 'info', `Carousel sub-item ${i + 1}/${galleryItems.length} created: ${itemData.id}`);
+    }
+
+    // Buat Parent Carousel Container
+    const parentPayload = {
+      caption: post.content_text,
+      media_type: 'CAROUSEL',
+      children: childrenIds.join(','),
+      access_token: token,
+    };
+
+    const parentRes = await fetch(`${apiHost}/${userId}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parentPayload),
+    });
+    const parentData = await parentRes.json();
+    if (!parentData.id) {
+      throw new Error(`Failed to create parent carousel: ${JSON.stringify(parentData.error || parentData)}`);
+    }
+
+    logTag(target, 'info', `Parent Carousel container created: ${parentData.id}`);
+    await supabase.from('post_targets').update({
+      status: 'IN_PROGRESS',
+      async_container_id: parentData.id,
+      executed_at: new Date().toISOString(),
+      last_polled_at: new Date().toISOString(),
+      error_payload: null,
+    }).eq('id', target.id);
+    return;
+  }
+
+  // JIKA SINGLE MEDIA (VIDEO REELS ATAU SINGLE IMAGE)
+  const bodyPayload = { caption: post.content_text, access_token: token };
 
   if (post.media_type === 'VIDEO') {
     bodyPayload.media_type = 'REELS';
@@ -215,7 +287,7 @@ async function initInstagram(post, target, token, mediaUrl) {
   }
 
   logTag(target, 'info', `Creating media container on ${apiHost}...`);
-  const r = await fetch(`${apiHost}/${target.connected_accounts.platform_user_id}/media`, {
+  const r = await fetch(`${apiHost}/${userId}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(bodyPayload),
@@ -306,6 +378,60 @@ async function initTikTok(post, target, token, mediaUrl, localFilePath) {
 
 async function initFacebook(post, target, token, mediaUrl) {
   const pageId = target.connected_accounts.platform_user_id;
+  const galleryItems = post.media_metadata?.gallery_items || [];
+
+  // Facebook multi-photo carousel / album
+  if (galleryItems.length > 1) {
+    logTag(target, 'info', `Uploading ${galleryItems.length} photos to Facebook Page...`);
+    const attachedMedia = [];
+
+    for (let i = 0; i < galleryItems.length; i++) {
+      const item = galleryItems[i];
+      let imgUrl = item.lh3_url || item.stream_url;
+      if (item.file_id && !item.file_id.startsWith('local-')) {
+        imgUrl = item.lh3_url || `https://drive.usercontent.google.com/download?id=${item.file_id}&export=download`;
+      }
+
+      const photoRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: imgUrl,
+          published: false,
+          access_token: token,
+        }),
+      });
+      const photoData = await photoRes.json();
+      if (!photoData.id) {
+        throw new Error(`Failed to upload Facebook photo ${i + 1}: ${JSON.stringify(photoData.error || photoData)}`);
+      }
+      attachedMedia.push({ media_fbid: photoData.id });
+    }
+
+    logTag(target, 'info', `Publishing Facebook multi-photo feed post...`);
+    const feedRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: post.content_text,
+        attached_media: attachedMedia,
+        access_token: token,
+      }),
+    });
+    const feedData = await feedRes.json();
+    if (!feedData.id) throw new Error(JSON.stringify(feedData.error || feedData));
+
+    logTag(target, 'info', `Facebook multi-photo post SUCCESS id: ${feedData.id}`);
+    await supabase.from('post_targets').update({
+      status: 'SUCCESS',
+      error_payload: null,
+      external_post_id: feedData.id,
+      external_post_url: `https://www.facebook.com/${feedData.id}`,
+      executed_at: new Date().toISOString(),
+    }).eq('id', target.id);
+    return;
+  }
+
   let postEndpoint = `https://graph.facebook.com/v19.0/${pageId}/feed`;
   let postBody = { message: post.content_text, access_token: token };
 

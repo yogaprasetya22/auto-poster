@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useComposerStore } from '../store/use-composer-store'
-import { AlertTriangle, Sparkles, Loader2 } from 'lucide-react'
+import { AlertTriangle, Wand2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const LIMITS: Record<string, number> = {
@@ -81,9 +81,9 @@ export function CaptionEditor() {
           {isGenerating ? (
             <Loader2 className="size-3 animate-spin" />
           ) : (
-            <Sparkles className="size-3 text-amber-300" />
+            <Wand2 className="size-3 text-foreground" />
           )}
-          <span>{isGenerating ? 'AI Menulis...' : 'Magic AI Caption'}</span>
+          <span>{isGenerating ? 'Menulis...' : 'Generate Caption'}</span>
         </button>
       </div>
 

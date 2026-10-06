@@ -1,24 +1,24 @@
 import { useState } from 'react'
-import { Sparkles, Loader2, ArrowRight } from 'lucide-react'
+import { Wand2, Loader2, ArrowRight } from 'lucide-react'
 import { useComposerStore } from '../store/use-composer-store'
 import { toast } from 'sonner'
 
 const QUICK_PRESETS = [
   {
-    label: '🔥 Promo JAGRES Reseller',
-    prompt: 'Promo peluang usaha agen reseller JAGRES Google Review Card modal 1 jutaan profit jutaan',
+    label: 'Promo Reseller JAGRES',
+    prompt: 'Peluang usaha reseller JAGRES Google Review Card modal terjangkau profit optimal',
   },
   {
-    label: '⭐ Solusi Rating Toko Sepi',
+    label: 'Solusi Rating Toko',
     prompt: 'Edukasi cara menaikkan rating bintang 5 Google Maps tanpa ribet pakai kartu NFC JAGRES',
   },
   {
-    label: '🚀 Fitur Sekali Tap Review',
-    prompt: 'Review kecanggihan teknologi kartu review NFC JAGRES sekali tempel langsung buka link review',
+    label: 'Demonstrasi Sekali Tap',
+    prompt: 'Demonstrasi kecanggihan teknologi kartu review NFC JAGRES sekali tempel langsung buka link review',
   },
   {
-    label: '💡 Tips UMKM Ramai Pembeli',
-    prompt: 'Strategi psikologi bisnis kenapa ulasan Google Maps mempengaruhi 90 persen keputusan pembeli',
+    label: 'Strategi Ulasan Google',
+    prompt: 'Strategi bisnis kenapa ulasan Google Maps mempengaruhi keputusan pembeli',
   },
 ]
 
@@ -71,17 +71,17 @@ export function AutopilotCommandBar() {
         {/* Header Tag */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-6 rounded-lg bg-[#F3F4F6] dark:bg-[#1C1E24] flex items-center justify-center border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.08)]">
-              <Sparkles className="size-3.5 text-amber-500 animate-pulse" />
+            <div className="size-6 rounded-lg bg-secondary flex items-center justify-center border border-border">
+              <Wand2 className="size-3.5 text-foreground" />
             </div>
-            <span className="text-xs font-bold tracking-wide uppercase text-black dark:text-white">
-              1-Prompt Studio Autopilot
+            <span className="text-xs font-semibold tracking-wide uppercase text-foreground">
+              Studio Asisten Konten
             </span>
-            <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800/60">
-              KNOWLEDGE CONNECTED
+            <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-secondary text-foreground font-medium border border-border">
+              MEMORI TERSAMBUNG
             </span>
           </div>
-          <span className="font-mono text-[10px] text-[#9CA3AF]">GEMINI 3.5 FLASH LITE</span>
+          <span className="font-mono text-[10px] text-muted-foreground">GENERATOR</span>
         </div>
 
         {/* Input Bar */}

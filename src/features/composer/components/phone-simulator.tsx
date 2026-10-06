@@ -8,14 +8,27 @@ interface PhoneSimulatorProps {
 }
 
 export function PhoneSimulator({ channel, setChannel }: PhoneSimulatorProps) {
-  const { contentText, media, title } = useComposerStore()
+  const { contentText, media, mediaItems, title } = useComposerStore()
   const [showSafeZone, setShowSafeZone] = useState(false)
   const [isPlaying, setIsPlaying] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isLiked, setIsLiked] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  const [dragStartX, setDragStartX] = useState<number | null>(null)
+  const [dragOffset, setDragOffset] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  const items = mediaItems?.length > 0 ? mediaItems : media ? [media] : []
+  const activeMedia = items[currentSlideIndex] || items[0] || null
+
+  useEffect(() => {
+    if (currentSlideIndex >= items.length && items.length > 0) {
+      setCurrentSlideIndex(0)
+    }
+  }, [items.length, currentSlideIndex])
 
   useEffect(() => {
     if (videoRef.current) {
@@ -25,9 +38,35 @@ export function PhoneSimulator({ channel, setChannel }: PhoneSimulatorProps) {
         videoRef.current.pause()
       }
     }
-  }, [isPlaying, media])
+  }, [isPlaying, activeMedia])
+
+  function handlePointerDown(e: React.PointerEvent) {
+    if (items.length <= 1) return
+    setDragStartX(e.clientX)
+    setDragOffset(0)
+    setIsDragging(true)
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!isDragging || dragStartX === null || items.length <= 1) return
+    const diff = e.clientX - dragStartX
+    setDragOffset(diff)
+  }
+
+  function handlePointerUp() {
+    if (!isDragging) return
+    setIsDragging(false)
+    if (dragOffset > 40 && currentSlideIndex > 0) {
+      setCurrentSlideIndex((prev) => prev - 1)
+    } else if (dragOffset < -40 && currentSlideIndex < items.length - 1) {
+      setCurrentSlideIndex((prev) => prev + 1)
+    }
+    setDragStartX(null)
+    setDragOffset(0)
+  }
 
   function togglePlayPause() {
+    if (Math.abs(dragOffset) > 5) return // Cegah play/pause jika sedang swipe
     if (!videoRef.current) return
     if (isPlaying) {
       videoRef.current.pause()
@@ -131,56 +170,104 @@ export function PhoneSimulator({ channel, setChannel }: PhoneSimulatorProps) {
             </div>
           </div>
 
-          {/* Video Player Canvas (Click to Play/Pause) */}
+          {/* Video Player Canvas (Click to Play/Pause, Pointer Drag to Swipe) */}
           <div 
-            onClick={togglePlayPause} 
-            className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer group"
+            onClick={togglePlayPause}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            className={`absolute inset-0 w-full h-full z-0 overflow-hidden bg-neutral-950 flex items-center justify-center select-none ${
+              items.length > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'
+            }`}
           >
-            {media?.streamUrl || media?.lh3Url ? (
-              media.mimeType.startsWith('image/') ? (
-                <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-black">
-                  <img
-                    src={media.streamUrl}
-                    alt={media.fileName}
-                    className="w-full h-full object-contain animate-pulse duration-5000 scale-105 transition-transform"
-                  />
-                  <div className="absolute top-10 left-3 z-10 px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-mono text-[9px]">
-                    POSTER PROMOSI RESMI
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <video
-                    ref={videoRef}
-                    src={media.streamUrl}
-                    className="w-full h-full object-cover"
-                    autoPlay
-                    playsInline
-                    loop
-                    onTimeUpdate={handleTimeUpdate}
-                    onLoadedMetadata={handleLoadedMetadata}
-                  />
-                  {/* Floating Pause Indicator Overlay */}
-                  {!isPlaying && (
-                    <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center z-10 transition-all">
-                      <div className="size-14 rounded-full bg-black/60 border border-white/30 flex items-center justify-center text-white shadow-2xl">
-                        <Play size={24} className="ml-1 fill-white" />
+            {items.length > 0 ? (
+              <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
+                {/* Carousel Track with smooth horizontal drag / translate */}
+                <div
+                  className={`flex w-full h-full ${
+                    isDragging ? 'transition-none' : 'transition-transform duration-300 ease-out'
+                  }`}
+                  style={{
+                    transform: `translateX(calc(-${currentSlideIndex * 100}% + ${dragOffset}px))`,
+                  }}
+                >
+                  {items.map((item, idx) => {
+                    const isVideo = item.mimeType.startsWith('video/')
+                    const url = item.streamUrl || item.lh3Url
+                    return (
+                      <div
+                        key={item.fileId || idx}
+                        className="w-full h-full shrink-0 flex items-center justify-center relative bg-black select-none"
+                      >
+                        {isVideo ? (
+                          <video
+                            ref={idx === currentSlideIndex ? videoRef : undefined}
+                            src={url}
+                            className="w-full h-full object-cover pointer-events-none"
+                            autoPlay
+                            playsInline
+                            loop
+                            onTimeUpdate={handleTimeUpdate}
+                            onLoadedMetadata={handleLoadedMetadata}
+                          />
+                        ) : (
+                          <img
+                            src={url}
+                            alt={item.fileName}
+                            className="w-full h-full object-contain pointer-events-none select-none"
+                            draggable={false}
+                          />
+                        )}
                       </div>
+                    )
+                  })}
+                </div>
+
+                {/* Floating Pause Indicator Overlay for active video */}
+                {activeMedia?.mimeType.startsWith('video/') && !isPlaying && (
+                  <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center z-10 transition-all pointer-events-none">
+                    <div className="size-14 rounded-full bg-black/60 border border-white/30 flex items-center justify-center text-white shadow-2xl">
+                      <Play size={24} className="ml-1 fill-white" />
                     </div>
-                  )}
-                </>
-              )
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="w-full h-full bg-gradient-to-b from-[#18191E] via-[#0D0E12] to-black flex flex-col items-center justify-center text-white/40 p-4 text-center">
-                <span className="material-symbols-outlined text-4xl mb-2">movie</span>
-                <p className="text-[11px] font-mono">Belum ada video dipilih</p>
-                <p className="text-[9px] text-white/30 mt-1">Upload MP4 atau generate dengan AI di sebelah kiri</p>
+                <span className="material-symbols-outlined text-4xl mb-2">perm_media</span>
+                <p className="text-[11px] font-mono">Belum ada media dipilih</p>
+                <p className="text-[9px] text-white/30 mt-1">Upload gambar/video atau slide di sebelah kiri</p>
               </div>
             )}
 
             {/* Gradient Overlays for High Legibility */}
-            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none"></div>
-            <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
+            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none z-10"></div>
+            <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none z-10"></div>
+
+            {/* Carousel Slide Indicators Dots (Positioned directly below the center media) */}
+            {items.length > 1 && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-[28%] inset-x-0 z-30 flex items-center justify-center pointer-events-auto"
+              >
+                <div className="flex items-center px-2.5 py-1.5 rounded-full bg-black/75 backdrop-blur-sm border border-white/20 shadow-lg">
+                  {/* Dots */}
+                  <div className="flex items-center gap-1.5">
+                    {items.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentSlideIndex(idx)}
+                        className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                          currentSlideIndex === idx ? 'bg-white w-4' : 'bg-white/40 w-1.5 hover:bg-white/70'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Safe Zone Boundary Overlay */}

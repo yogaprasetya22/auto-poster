@@ -33,7 +33,7 @@ export default defineConfig({
             }
           }
 
-          if (req.url === '/api/upload' && req.method === 'POST') {
+          if (req.url?.startsWith('/api/upload') && req.method === 'POST') {
             try {
               const m: any = await import('./api/upload.js' as any)
               await m.default(req, customRes)
