@@ -66,7 +66,7 @@ function formatTimeOnly(iso: string) {
 
 export function SchedulePage() {
   const navigate = useNavigate()
-  const { loadDraft } = useComposerStore()
+  const { loadDraft, reset } = useComposerStore()
   const [targets, setTargets] = useState<any[]>([])
   const [drafts, setDrafts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -377,7 +377,10 @@ export function SchedulePage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/composer')}
+            onClick={() => {
+              reset()
+              navigate('/composer')
+            }}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity shadow-xs cursor-pointer"
           >
             <Plus size={14} />
@@ -577,7 +580,10 @@ export function SchedulePage() {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/composer')}
+              onClick={() => {
+                reset()
+                navigate('/composer')
+              }}
               className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
             >
               Buat Draft di Composer
@@ -684,7 +690,10 @@ export function SchedulePage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/composer')}
+            onClick={() => {
+              reset()
+              navigate('/composer')
+            }}
             className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
           >
             Buka Composer

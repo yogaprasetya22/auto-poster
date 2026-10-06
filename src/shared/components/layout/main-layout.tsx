@@ -11,6 +11,7 @@ import { ThemeToggle } from '@/shared/components/theme-toggle'
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard Overview',
   '/composer': 'Composer Postingan',
+  '/drafts': 'Draf Postingan',
   '/schedule': 'Jadwal Postingan',
   '/history': 'Riwayat Eksekusi',
   '/settings': 'Pengaturan & Koneksi Akun',

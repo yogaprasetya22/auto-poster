@@ -176,7 +176,21 @@ export const useComposerStore = create<ComposerState>((set) => ({
       isSimulationMode: Boolean(post.media_metadata?.is_simulation),
     })
   },
-  reset: () => set(init),
+  reset: () =>
+    set({
+      title: '',
+      contentText: '',
+      postFormat: 'VIDEO',
+      mediaType: 'VIDEO',
+      media: null,
+      mediaItems: [],
+      targetAccountIds: [],
+      scheduledAt: new Date(Date.now() + 3600_000).toISOString().slice(0, 16),
+      isUploading: false,
+      uploadProgress: 0,
+      isSimulationMode: false,
+      editingDraftId: null,
+    }),
 }))
 
 // Expose to window for lightweight Playwright e2e automation (/ponytail)

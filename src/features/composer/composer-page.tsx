@@ -7,7 +7,7 @@ import { AccountSelector } from './components/account-selector'
 import { PhoneSimulator } from './components/phone-simulator'
 import { supabase } from '@/shared/lib/supabase'
 import { toast } from 'sonner'
-import { Loader2, X, ArrowRight, Wand2, Bookmark } from 'lucide-react'
+import { Loader2, X, ArrowRight, Wand2, Bookmark, Plus } from 'lucide-react'
 import { composerFormSchema } from './validation'
 import {
   Drawer,
@@ -304,6 +304,20 @@ export function ComposerPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Tombol Buat Baru / Kosongkan Form */}
+          <button
+            type="button"
+            onClick={() => {
+              reset()
+              toast.success('Form berhasil dikosongkan. Siap untuk membuat postingan baru!')
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs font-semibold hover:bg-muted transition-colors cursor-pointer shadow-2xs"
+            title="Kosongkan form dan buat postingan baru"
+          >
+            <Plus size={13} />
+            <span>Buat Baru</span>
+          </button>
+
           {/* Tombol AI Drawer */}
           <button
             type="button"
@@ -356,20 +370,26 @@ export function ComposerPage() {
           <div className="bg-card rounded-2xl border border-border p-5 shadow-xs flex flex-col gap-5">
             {/* Draft Mode Banner (jika sedang membuka / mengedit draft) */}
             {editingDraftId && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary border border-border text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
-                  <span className="font-semibold text-foreground">Mode Edit Draft:</span>
-                  <span className="text-muted-foreground font-mono text-[11px] truncate max-w-[200px] sm:max-w-xs">
-                    {title || 'Tanpa Judul'}
-                  </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="font-semibold text-amber-800 dark:text-amber-300">Mode Edit Draf:</span>
+                    <span className="text-foreground font-mono text-[11px] truncate max-w-[200px] sm:max-w-xs font-medium">
+                      {title || 'Tanpa Judul'}
+                    </span>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => reset()}
-                  className="px-2.5 py-1 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  onClick={() => {
+                    reset()
+                    toast.info('Keluar dari mode edit draf. Form kembali kosong untuk konten baru.')
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-background border border-amber-500/40 text-foreground hover:bg-muted transition-colors cursor-pointer shadow-2xs shrink-0"
                 >
-                  Batal / Buat Baru
+                  <Plus size={12} />
+                  <span>Buat Baru (Keluar Draf)</span>
                 </button>
               </div>
             )}
@@ -408,7 +428,10 @@ export function ComposerPage() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border/60">
               <button
                 type="button"
-                onClick={reset}
+                onClick={() => {
+                  reset()
+                  toast.info('Form postingan telah dikosongkan.')
+                }}
                 className="w-full sm:w-auto px-4 py-2 rounded-lg border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
               >
                 Reset Form

@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Layers,
   PenSquare,
+  FileText,
   CalendarClock,
   History,
   Settings,
@@ -27,6 +28,7 @@ export function NavMain() {
   // Publikasi sub-menu is open if current pathname is in any of its children
   const isPublishingActive =
     location.pathname === "/composer" ||
+    location.pathname === "/drafts" ||
     location.pathname === "/schedule" ||
     location.pathname === "/history"
 
@@ -62,12 +64,12 @@ export function NavMain() {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {/* Group 2: Publikasi (Parent Menu dengan Sub-menu Composer, Jadwal, History) */}
+      {/* Group 2: Publikasi (Parent Menu dengan Sub-menu Composer, Drafts, Jadwal, History) */}
       <SidebarGroup className="p-0">
         <SidebarGroupLabel className="px-3 text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold flex items-center justify-between">
           <span>Manajemen Konten</span>
           <span className="text-[9px] px-1.5 py-0.2 rounded bg-muted font-mono font-medium">
-            3 FITUR
+            4 FITUR
           </span>
         </SidebarGroupLabel>
         <SidebarGroupContent className="mt-1">
@@ -112,7 +114,21 @@ export function NavMain() {
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
 
-                  {/* Sub-item 2: Jadwal Konten */}
+                  {/* Sub-item 2: Draf Postingan */}
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      render={<NavLink to="/drafts" />}
+                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span>Draf Konten</span>
+                      </div>
+                      <span className="size-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+
+                  {/* Sub-item 3: Jadwal Konten */}
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
                       render={<NavLink to="/schedule" />}
@@ -126,7 +142,7 @@ export function NavMain() {
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
 
-                  {/* Sub-item 3: Riwayat Eksekusi */}
+                  {/* Sub-item 4: Riwayat Eksekusi */}
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
                       render={<NavLink to="/history" />}

@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('@/features/dashboard/dashboard-page').t
 const ComposerPage = lazy(() => import('@/features/composer/composer-page').then((m) => ({ default: m.ComposerPage })))
 const HistoryPage = lazy(() => import('@/features/history/history-page').then((m) => ({ default: m.HistoryPage })))
 const SchedulePage = lazy(() => import('@/features/schedule/schedule-page').then((m) => ({ default: m.SchedulePage })))
+const DraftsPage = lazy(() => import('@/features/drafts/drafts-page').then((m) => ({ default: m.DraftsPage })))
 const SettingsPage = lazy(() => import('@/features/accounts/settings-page').then((m) => ({ default: m.SettingsPage })))
 const TermsPage = lazy(() => import('@/features/legal/terms-page').then((m) => ({ default: m.TermsPage })))
 const PrivacyPage = lazy(() => import('@/features/legal/privacy-page').then((m) => ({ default: m.PrivacyPage })))
@@ -45,6 +46,7 @@ export function App() {
               <Route element={<MainLayout />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="composer" element={<ComposerPage />} />
+                <Route path="drafts" element={<DraftsPage />} />
                 <Route path="schedule" element={<SchedulePage />} />
                 <Route path="history" element={<HistoryPage />} />
                 <Route path="settings" element={<SettingsPage />} />

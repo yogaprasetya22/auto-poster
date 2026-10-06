@@ -122,7 +122,7 @@ export function CaptionEditor() {
         value={contentText}
         onChange={(e) => setContentText(e.target.value)}
         rows={3}
-        placeholder="Tulis caption konten Anda di sini atau klik '✨ Magic AI Caption' untuk dibuatkan otomatis..."
+        placeholder="Tulis caption konten Anda di sini atau klik 'Generate AI Caption' untuk dibuatkan otomatis..."
         className="w-full bg-[#F9FAFB] dark:bg-[#16181D] border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.12)] px-3.5 py-2.5 rounded-lg text-xs text-black dark:text-white placeholder:text-[#9CA3AF] resize-none focus:outline-none focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white transition-all leading-relaxed overflow-hidden"
         maxLength={63206}
       />
