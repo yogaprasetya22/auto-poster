@@ -3,6 +3,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { useComposerStore } from '../store/use-composer-store'
 import { Check } from 'lucide-react'
 import { InstagramIcon, FacebookIcon, ThreadsIcon, TikTokIcon } from '@/shared/components/icons/platform-icons'
+import { SkeletonContainer } from '@/shared/components/ui/skeleton-container'
 
 interface Account {
   id: string
@@ -74,7 +75,18 @@ export function AccountSelector() {
   }, [])
 
   if (loading) {
-    return <div className="text-xs text-muted-foreground animate-pulse">Memuat akun terhubung...</div>
+    return (
+      <SkeletonContainer isLoading={true}>
+        <div className="flex flex-col gap-2">
+          <div className="h-4 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-14 rounded-lg bg-slate-200 dark:bg-slate-700 p-2" />
+            ))}
+          </div>
+        </div>
+      </SkeletonContainer>
+    )
   }
 
   if (accounts.length === 0) {
@@ -88,7 +100,7 @@ export function AccountSelector() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-black flex items-center gap-1.5">
+        <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
           <span className="material-symbols-outlined text-[15px]">send_and_archive</span>
           <span>Target Platform & Akun Distribusi</span>
         </label>
@@ -106,7 +118,7 @@ export function AccountSelector() {
                 })
               }
             }}
-            className="text-[11px] font-mono text-black hover:underline cursor-pointer font-medium"
+            className="text-[11px] font-mono text-foreground hover:underline cursor-pointer font-medium"
           >
             {accounts.every((a) => targetAccountIds.includes(a.id)) ? 'Lepas Semua' : 'Pilih Semua'}
           </button>

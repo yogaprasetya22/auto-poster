@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   const {
-    productName = 'JAGRES Google Review Card',
+    productName = '',
     productImageUrl = '',
     productImages = [], // Array of { name, url }
     targetPlatform = 'all',
@@ -23,79 +23,80 @@ export default async function handler(req, res) {
   // Susun daftar referensi gambar produk
   const imagesListText = productImages && productImages.length > 0
     ? productImages.map((img, i) => `Gambar ${i + 1} (${img.name}): ${img.url}`).join('\n')
-    : productImageUrl || '(Gunakan deskripsi fisik kartu PVC NFC hitam matte standar ATM)';
+    : productImageUrl || '(Gunakan fisik produk sesuai referensi gambar/deskripsi dari database knowledge)';
+
+  const activeProductLabel = productName || 'Produk Sesuai Database / Brief';
 
   const prompt = `
-Peran Anda adalah AI Director & Creative Prompt Engineer spesialis Video Iklan Komersial Generatif (Google Flow / flow.google.com, Kling AI, Runway Gen-3, Luma Dream Machine, Midjourney).
+Peran Anda: Lead Commercial Film Director & Google Flow (Veo 3.1) Technical Prompt Architect.
+Tugas Mutlak: Mengubah referensi produk nyata menjadi prompt video iklan vertikal 9:16 yang ANTI-HALUSINASI, SANGAT TEKNIS, dan FOTOREALISTIS.
 
-Basis Pengetahuan Resmi Produk & Brand:
+BASIS DATA RESMI PRODUK DARI DATABASE (JANGAN MENGARANG NAMA/SPEK/HARGA):
 ${baseKnowledge}
 
-Informasi Produk Kampanye:
-- Nama Produk: ${productName}
-- Galeri Referensi Mentahan Gambar Produk Asli:
+ASET & BRIEF KAMPANYE:
+- Nama Produk: ${activeProductLabel}
+- Galeri Foto Mentahan Asli:
 ${imagesListText}
-- Angle Khusus / Brief: ${customAngle || 'Iklan promosi harga promo mulai 25 ribu untuk pemilik resto/kafe/klinik agar ulasan Google Maps ramai'}
+- Brief / Angle Kampanye: ${customAngle || 'Iklan promosi produk berbasis data resmi knowledge base untuk target pasar lokal Indonesia'}
 
-ATURAN WAJIB & TUNING SPESIFIK (INDONESIAN LOCAL CONTEXT):
-1. **Wajah & Karakter (Indonesian Cast)**: Semua pemeran/karakter dalam video HARUS berwajah Indonesia (Indonesian face, Southeast Asian ethnicity, natural Southeast Asian facial features). JANGAN gunakan bule atau model barat. Deskripsikan misalnya "authentic Indonesian male cafe owner in his late 20s" atau "young Indonesian female customer wearing casual modest outfit".
-2. **Bahasa & Voiceover**: Seluruh teks judul, visual aksi (storyboard_id), dan VOICEOVER (voiceover_id) HARUS 100% menggunakan Bahasa Indonesia yang luwes, alami, persuasif, seperti kreator TikTok/Reels lokal Indonesia.
-3. **Latar / Suasana (Setting)**: Kafe, kedai kopi, resto, atau kasir UMKM modern Indonesia yang hangat dan otentik.
-4. **Prompt Generator Video (English)**: Bagian "prompt_english" dan "full_flow_prompt" tetap dalam Bahasa Inggris profesional agar AI generator (Google Flow/Kling/Runway) paham secara presisi, TETAPI WAJIB secara eksplisit mencantumkan: "authentic Indonesian person, Southeast Asian features, cozy Indonesian modern cafe interior".
-
-PENTING TENTANG MULTI-IMAGE REFERENSI:
-Jika terdapat beberapa gambar produk yang diunggah (misal: tampak depan kartu, kartu di meja kasir, akrilik standee, atau tap HP):
-- Sesuaikan alur cerita (Scene 1, Scene 2, Scene 3) agar selaras dengan gambar-gambar tersebut.
-- Di setiap adegan sertakan field "reference_image_used": sebutkan nama gambar yang paling cocok dijadikan keyframe adegan tersebut.
-
-Tugas Anda:
-Buat Multi-Scene Video Storyboard 3 Bagian (Format Vertikal 9:16 untuk Reels & TikTok) lengkap dengan Prompt AI Generatif yang SANGAT DETAIL, fotorealistis, dan langsung siap di-copy-paste ke agent video (Google Flow / Kling / Runway).
+ATURAN ANTI-HALUSINASI & ANTI-TOLOL UNTUK GOOGLE FLOW / VEO / KLING:
+1. JANGAN MEMBUAT PROMPT SEPERTI PUISI ATAU DONGENG. AI video generatif membutuhkan instruksi sinematik teknis:
+   - Gerakan Kamera: [Static close-up / Slow dolly push-in / Pan left / 35mm lens / Macro 50mm / Shallow depth of field / f/2.8].
+   - Subjek & Kecepatan: Gerakan tubuh dan tangan harus natural, tidak terburu-buru, tanpa gerakan akrobatik.
+   - Kontinuitas Objek Fisik: Bentuk fisik produk harus persis seperti foto mentahan dan deskripsi database. Dilarang mendeskripsikan bentuk meleleh, morphing, atau teks melayang tanpa perangkat fisik.
+2. CASTING INDONESIA WAJIB & KONSISTEN:
+   - Karakter harus explicitly didefinisikan: "authentic Indonesian Southeast Asian male/female, natural warm skin tone, Indonesian facial anatomy".
+   - Setting: Konteks toko, kafe, kantor, atau tempat usaha modern lokal Indonesia.
+3. TEKNIK IMAGE-TO-VIDEO KEYFRAME:
+   - Ingatkan bahwa gambar mentahan produk pengguna HARUS dijadikan First Frame (Image input).
+   - Prompt mendeskripsikan transisi gerakan dari foto mentahan tersebut, BUKAN menggambar ulang produk dari nol.
 
 Struktur 3 Bagian:
-1. Scene 1 - Hook (0-3 detik): Masalah pemilik bisnis lokal Indonesia (pemilik kafe/resto berwajah Indonesia cemas melihat rating Google Maps sepi atau kalah saing).
-2. Scene 2 - Demo Produk (3-8 detik): Close-up tangan pelanggan/kasir Indonesia menempelkan smartphone (NFC tap) ke kartu produk ${productName}. Layar smartphone langsung memunculkan pop-up bintang 5 Google Maps. Tampilkan kartu produk secara jelas dan tajam.
-3. Scene 3 - CTA & Penawaran (8-12 detik): Visual kartu produk dengan acrylic standee di meja kasir elegan, teks harga promo mulai Rp25.000, pemilik kafe tersenyum puas, dan ajakan bertindak (Order sekarang / link di bio).
+1. Scene 1 - Hook (0-3 detik): Pemilik usaha atau target persona lokal Indonesia sedang menghadapi masalah nyata yang diselesaikan produk ini.
+2. Scene 2 - Action & Demo (3-8 detik): Close-up sudut 45 derajat atau macro shot, interaksi nyata pengguna dengan produk ${activeProductLabel} secara jelas dan tajam.
+3. Scene 3 - Showcase & CTA (8-12 detik): Produk tertata rapi di showcase profesional dengan pencahayaan komersial, highlight nilai produk dari database, dan ajakan bertindak (CTA).
 
-Keluarkan HANYA JSON murni tanpa markdown wrapper/backtick dengan struktur:
+Format output WAJIB JSON murni tanpa markdown wrapper/backtick:
 {
-  "title": "Judul Konsep Kampanye Video",
-  "concept_overview": "Ringkasan konsep iklan dalam 2 kalimat Bahasa Indonesia",
+  "title": "Judul Kampanye Ringkas & Tajam",
+  "concept_overview": "Konsep 2 kalimat jelas dalam Bahasa Indonesia",
   "scenes": [
     {
       "scene_number": 1,
       "name": "Hook Problem",
       "duration": "0-3s",
-      "reference_image_used": "Nama gambar referensi yang cocok (atau 'Stock Cafe Scene')",
-      "storyboard_id": "Visual aksi dan suasana adegan dalam Bahasa Indonesia (eksplisit sebut karakter lokal Indonesia)",
+      "reference_image_used": "Nama gambar referensi atau visual pembuka",
+      "storyboard_id": "Deskripsi adegan dalam Bahasa Indonesia yang realistis",
       "voiceover_id": "Teks naskah pengisi suara / subtitle dalam Bahasa Indonesia yang luwes",
-      "prompt_english": "Ultra-detailed prompt in English for AI video generator. Explicitly include: authentic Indonesian person/actor, Southeast Asian features, camera motion, lighting, 4k photorealistic cinematic commercial 9:16 vertical, shallow depth of field.",
-      "negative_prompt": "caucasian, western face, blurry, distorted text, low quality, cartoon, 3d render"
+      "prompt_english": "Cinematic 9:16 vertical video. Authentic Indonesian Southeast Asian person, casual modern outfit. Medium close-up, 50mm lens. Engaging relatable facial expression matching the problem hook. Soft ambient warm lighting, realistic interior. Photorealistic, 4K, realistic skin texture, zero blur.",
+      "negative_prompt": "western faces, caucasian, blurry, cartoon, 3d animation, deformed fingers, warped text, rapid jerky camera, morphing objects"
     },
     {
       "scene_number": 2,
-      "name": "Product Action & NFC Demo",
+      "name": "Product Action & Demo",
       "duration": "3-8s",
-      "reference_image_used": "Nama gambar referensi foto produk yang dipakai",
-      "storyboard_id": "Tangan pelanggan/kasir Indonesia memegang smartphone mendekatkan ke kartu produk di meja kasir...",
-      "voiceover_id": "Cukup tap 1 detik, langsung keluar bintang lima...",
-      "prompt_english": "Macro shot, authentic Southeast Asian Indonesian hands holding modern smartphone tapping onto the black matte NFC smart review card placed on wooden cafe counter. Clean seamless tap, phone screen lights up with Google Maps 5-star review modal, cinematic warm cafe lighting, 8k commercial cinematography, vertical 9:16.",
-      "negative_prompt": "caucasian, deformed fingers, extra limbs, bad anatomy, glitch, blurry"
+      "reference_image_used": "Foto produk asli yang digunakan sebagai keyframe",
+      "storyboard_id": "Interaksi langsung dan demo cara kerja produk...",
+      "voiceover_id": "Penjelasan solusi instan dari produk...",
+      "prompt_english": "Extreme close-up macro shot, 45-degree angle. Natural Southeast Asian Indonesian hands interacting smoothly with the product ${activeProductLabel}. Crisp focus on authentic product details matching reference image, f/2.8 shallow depth of field, natural lighting, high-end commercial aesthetic, 9:16 vertical.",
+      "negative_prompt": "extra fingers, mutated hands, distorted product, glitch, floating objects, caucasian skin"
     },
     {
       "scene_number": 3,
       "name": "Offer & CTA Climax",
       "duration": "8-12s",
-      "reference_image_used": "Nama gambar referensi standee/paket jika ada",
-      "storyboard_id": "Tampilan produk kartu dengan standee akrilik dan highlight harga promo mulai 25 ribu...",
-      "voiceover_id": "Mulai 25 ribu aja, upgrade toko kamu sekarang! Klik link di bio.",
-      "prompt_english": "Hero product commercial showcase, friendly Indonesian cafe owner smiling proudly in background, the smart review card on sleek acrylic standee next to cafe espresso machine, soft bokeh lights, commercial grade slow camera push-in, clean premium aesthetics, 9:16 vertical video.",
-      "negative_prompt": "caucasian, low resolution, oversaturated, amateur footage"
+      "reference_image_used": "Display produk atau foto showcase utama",
+      "storyboard_id": "Tampilan produk elegan dan ajakan bertindak...",
+      "voiceover_id": "Ajakan pemesanan langsung / CTA...",
+      "prompt_english": "Slow smooth dolly-in shot. Hero product showcase of ${activeProductLabel} in premium setting. Soft background bokeh featuring smiling Indonesian actor. Commercial lighting, luxury minimal branding, crisp 4K vertical 9:16 commercial video.",
+      "negative_prompt": "oversaturated, amateur video, flickering, unstable frame, western models, cheap distorted look"
     }
   ],
-  "full_flow_prompt": "Prompt 1 BLOK langsung dieksekusi oleh AI Video (Google Flow / Veo / Kling). WAJIB diawali kalimat imperatif: 'Generate a continuous 9:16 vertical commercial video now. Do not reply with text or explanations.' Diikuti alur visual adegan secara padat, deskripsi aktor Indonesia otentik, pencahayaan kafe lokal, dan link foto referensi produk.",
+  "full_flow_prompt": "Prompt kontinu Google Flow / Veo yang menggabungkan Hook, Demo aksi produk ${activeProductLabel}, dan Showcase akhir dalam satu continuous single-take vertikal 9:16 fotorealistis.",
   "agent_instructions": {
-    "google_flow": "Panduan langkah memasukkan prompt ke flow.google.com atau Kling AI dengan setting cast lokal Indonesia",
-    "image_prompt_reference": "Deskripsi prompt gambar awal untuk Midjourney/Flux (Indonesian portrait keyframe)"
+    "google_flow": "1. Buka flow.google. 2. Pilih mode 'Image to Video' dan unggah foto mentahan produk sebagai Frame 1. 3. Masukkan prompt adegan atau full_flow_prompt. 4. Set format 9:16 vertical.",
+    "image_prompt_reference": "Photorealistic commercial keyframe: ${activeProductLabel} in clean professional Indonesian business setting, 85mm lens"
   }
 }
 `;
@@ -103,6 +104,7 @@ Keluarkan HANYA JSON murni tanpa markdown wrapper/backtick dengan struktur:
   const models = [
     'gemini-3.8-flash',
     'gemini-3.5-flash',
+    'gemini-2.5-flash',
     'gemini-flash-latest',
   ];
 

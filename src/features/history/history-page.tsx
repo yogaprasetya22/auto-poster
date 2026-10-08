@@ -15,20 +15,23 @@ export function HistoryPage() {
   const [targets, setTargets] = useState<any[]>([])
   const [calendarTargets, setCalendarTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  // ponytail: Riwayat (/history) fokus pada konten yang sudah dieksekusi (Sukses & Gagal), bukan antrean mendatang
+  const [filterStatus, setFilterStatus] = useState<string>('SUCCESS')
   const [dateFilter, setDateFilter] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('list')
+  // ponytail: Default ke 'calendar' agar tampilan kalender muncul duluan
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [networkLatency, setNetworkLatency] = useState<number>(118)
   const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
 
   async function loadData(isSilent = false) {
     if (!isSilent) setLoading(true)
     const tStart = performance.now()
-    
-    // Fetch riwayat postingan untuk tabel dan kalender
+
+    // Fetch riwayat eksekusi postingan untuk tabel dan kalender
     const { data } = await supabase
       .from('post_targets')
       .select('*, posts(*), connected_accounts(account_name, platform)')
+      .in('status', ['SUCCESS', 'FAILED'])
       .order('updated_at', { ascending: false })
       .limit(300)
 
@@ -72,7 +75,7 @@ export function HistoryPage() {
     if (!hasInProgress) return
 
     const interval = setInterval(() => {
-      fetch('/api/cron/dispatcher').catch(() => {})
+      fetch('/api/cron/dispatcher').catch(() => { })
     }, 20_000)
 
     return () => clearInterval(interval)
@@ -88,7 +91,7 @@ export function HistoryPage() {
     } else {
       toast.success('Target direset ke PENDING, engine akan segera mengeksekusi ulang!')
       loadData(true)
-      fetch('/api/cron/dispatcher').catch(() => {})
+      fetch('/api/cron/dispatcher').catch(() => { })
     }
   }
 
@@ -119,7 +122,7 @@ export function HistoryPage() {
     } else {
       toast.success(`${failedIds.length} target gagal berhasil direset ke PENDING!`)
       loadData(true)
-      fetch('/api/cron/dispatcher').catch(() => {})
+      fetch('/api/cron/dispatcher').catch(() => { })
     }
   }
 
@@ -188,7 +191,7 @@ export function HistoryPage() {
     const currentHour = new Date().getHours()
     const nextHour = String((currentHour + 1) % 24).padStart(2, '0')
     const scheduledDateTime = `${dateStr}T${nextHour}:00`
-    
+
     setScheduledAt(scheduledDateTime)
     toast.success(`Tanggal postingan disetel ke ${dateStr}. Silakan atur jam upload di Composer!`)
     navigate('/composer')
@@ -253,81 +256,64 @@ export function HistoryPage() {
         <div className="flex flex-wrap items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border/40">
           <button
             type="button"
-            onClick={() => setFilterStatus('ALL')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'ALL'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Semua ({targets.length})
-          </button>
-
-          <button
-            type="button"
             onClick={() => setFilterStatus('SUCCESS')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'SUCCESS'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'SUCCESS'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Sukses ({successCount})
           </button>
 
           <button
             type="button"
-            onClick={() => setFilterStatus('PENDING')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'PENDING'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Antrean ({pendingCount})
-          </button>
-
-          <button
-            type="button"
             onClick={() => setFilterStatus('FAILED')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'FAILED'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'FAILED'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Gagal ({failedCount})
           </button>
-        </div>
 
-        {/* View Mode Toggle: List Table vs Event Calendar */}
-        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border/40">
           <button
             type="button"
-            onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              viewMode === 'list'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            onClick={() => setFilterStatus('ALL')}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'ALL'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
-            <List size={13} />
-            <span>Tabel</span>
+            Semua Riwayat ({targets.length})
           </button>
+        </div>
+
+        {/* View Mode Toggle: Event Calendar vs List Table */}
+        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border/40">
           <button
             type="button"
             onClick={() => {
               setViewMode('calendar')
               setDateFilter(null)
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              viewMode === 'calendar'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${viewMode === 'calendar'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             <CalendarIcon size={13} />
             <span>Kalender</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${viewMode === 'list'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
+          >
+            <List size={13} />
+            <span>Tabel</span>
           </button>
         </div>
       </div>
@@ -354,14 +340,14 @@ export function HistoryPage() {
               }}
               className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-[#18181B] text-black dark:text-white border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors cursor-pointer"
             >
-              Kembali ke Kalender 
+              Kembali ke Kalender
             </button>
             <button
               type="button"
               onClick={() => setDateFilter(null)}
               className="px-2 py-1 text-xs text-[#6B7280] hover:text-black dark:hover:text-white cursor-pointer"
             >
-              Tampilkan Semua Tanggal 
+              Tampilkan Semua Tanggal
             </button>
           </div>
         </div>

@@ -15,6 +15,9 @@ export function ProtectedRoute() {
   }
 
   if (!user) {
+    if (import.meta.env.DEV) {
+      return <Outlet />
+    }
     return <Navigate to="/login" replace />
   }
 

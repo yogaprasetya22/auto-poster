@@ -100,7 +100,7 @@ export function DashboardPage() {
     } else {
       toast.success('Target direset ke PENDING, engine akan segera mengeksekusi ulang!')
       loadData(true)
-      fetch('/api/cron/dispatcher').catch(() => {})
+      fetch('/api/cron/dispatcher').catch(() => { })
     }
   }
 
@@ -200,11 +200,10 @@ export function DashboardPage() {
                   key={t}
                   type="button"
                   onClick={() => setSelectedTimeframe(t)}
-                  className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
-                    active
-                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${active
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                 >
                   {labelMap[t]}
                 </button>
@@ -227,6 +226,35 @@ export function DashboardPage() {
           >
             <span className="material-symbols-outlined text-[15px]">add</span>
             <span>Buat Postingan</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* FTUX Onboarding Banner */}
+      <div className="p-4 sm:p-5 rounded-2xl border border-border bg-card shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            <h2 className="text-sm sm:text-base font-bold text-foreground">
+              Otomatisasi Konten Media Sosial
+            </h2>
+          </div>
+          <p className="text-xs text-muted-foreground max-w-xl leading-relaxed">
+            Pilih produk dari katalog, hasilkan video vertikal atau banner feed dalam hitungan detik, lalu jadwalkan penayangan otomatis ke TikTok, Instagram, dan Facebook.
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            to="/settings"
+            className="px-3.5 py-2 rounded-xl border border-border bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold transition-colors"
+          >
+            Koneksi Akun
+          </Link>
+          <Link
+            to="/composer"
+            className="px-4 py-2 rounded-xl bg-foreground text-background text-xs font-semibold transition-opacity hover:opacity-90 shadow-xs flex items-center gap-1.5"
+          >
+            <span>+ Buat Postingan Baru</span>
           </Link>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { AppSidebar } from '@/shared/components/app-sidebar'
 import {
@@ -10,8 +11,9 @@ import { ThemeToggle } from '@/shared/components/theme-toggle'
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard Overview',
+  '/products': 'Katalog Produk',
   '/composer': 'Composer Postingan',
-  '/drafts': 'Draf Postingan',
+  '/auto-schedule': 'Jadwal Otomatis AI',
   '/schedule': 'Jadwal Postingan',
   '/history': 'Riwayat Eksekusi',
   '/settings': 'Pengaturan & Koneksi Akun',
@@ -40,7 +42,28 @@ export function MainLayout() {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="w-full max-w-7xl mx-auto space-y-6">
+                <div className="animate-pulse space-y-6">
+                  <div className="flex justify-between items-center pb-4 border-b border-border">
+                    <div className="space-y-2">
+                      <div className="h-6 w-48 bg-muted rounded-lg" />
+                      <div className="h-4 w-72 bg-muted rounded" />
+                    </div>
+                    <div className="h-9 w-32 bg-muted rounded-lg" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                    <div className="h-48 bg-muted rounded-2xl" />
+                    <div className="h-48 bg-muted rounded-2xl" />
+                    <div className="h-48 bg-muted rounded-2xl" />
+                  </div>
+                </div>
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </SidebarInset>
     </SidebarProvider>

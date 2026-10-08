@@ -70,7 +70,8 @@ export function SchedulePage() {
   const [targets, setTargets] = useState<any[]>([])
   const [drafts, setDrafts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  // ponytail: Default filter ke PENDING agar hanya antrean yang belum diposting yang tampil
+  const [filterStatus, setFilterStatus] = useState<string>('PENDING')
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [selectedTarget, setSelectedTarget] = useState<any | null>(null)
 
@@ -153,7 +154,7 @@ export function SchedulePage() {
     } else {
       toast.success('Target direset ke PENDING!')
       loadSchedules(true)
-      fetch('/api/cron/dispatcher').catch(() => {})
+      fetch('/api/cron/dispatcher').catch(() => { })
     }
   }
 
@@ -324,11 +325,10 @@ export function SchedulePage() {
                     key={item}
                     type="button"
                     onClick={() => setCurrentPage(item)}
-                    className={`size-7 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-                      currentPage === item
-                        ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                        : 'bg-card border border-border text-foreground hover:bg-muted'
-                    }`}
+                    className={`size-7 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${currentPage === item
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                      : 'bg-card border border-border text-foreground hover:bg-muted'
+                      }`}
                   >
                     {item}
                   </button>
@@ -394,36 +394,33 @@ export function SchedulePage() {
         <div className="flex flex-wrap items-center gap-1 p-0.5 rounded-lg bg-secondary border border-border/40">
           <button
             type="button"
-            onClick={() => setFilterStatus('ALL')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'ALL'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Semua ({targets.length})
-          </button>
-
-          <button
-            type="button"
             onClick={() => setFilterStatus('PENDING')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'PENDING'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'PENDING'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Antrean ({pendingCount})
           </button>
 
           <button
             type="button"
+            onClick={() => setFilterStatus('ALL')}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'ALL'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
+          >
+            Semua ({targets.length})
+          </button>
+
+          <button
+            type="button"
             onClick={() => setFilterStatus('SUCCESS')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'SUCCESS'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'SUCCESS'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Terbit ({successCount})
           </button>
@@ -431,11 +428,10 @@ export function SchedulePage() {
           <button
             type="button"
             onClick={() => setFilterStatus('FAILED')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'FAILED'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'FAILED'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Gagal ({failedCount})
           </button>
@@ -443,11 +439,10 @@ export function SchedulePage() {
           <button
             type="button"
             onClick={() => setFilterStatus('DRAFT')}
-            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-              filterStatus === 'DRAFT'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${filterStatus === 'DRAFT'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Draft ({drafts.length})
           </button>
@@ -518,11 +513,10 @@ export function SchedulePage() {
                             <span className="text-xs font-medium leading-none">{children}</span>
                             {!modifiers.outside && count > 0 && (
                               <span
-                                className={`text-[9px] font-mono font-bold leading-none px-1 py-0.5 rounded-full ${
-                                  isRangeEndpoint
-                                    ? 'bg-white/20 text-white dark:bg-black/20 dark:text-black'
-                                    : 'bg-black/10 dark:bg-white/20 text-foreground dark:text-white'
-                                }`}
+                                className={`text-[9px] font-mono font-bold leading-none px-1 py-0.5 rounded-full ${isRangeEndpoint
+                                  ? 'bg-white/20 text-white dark:bg-black/20 dark:text-black'
+                                  : 'bg-black/10 dark:bg-white/20 text-foreground dark:text-white'
+                                  }`}
                               >
                                 {count}p
                               </span>
@@ -614,7 +608,7 @@ export function SchedulePage() {
                             alt={title}
                             className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
-                              ;(e.target as HTMLElement).style.display = 'none'
+                              ; (e.target as HTMLElement).style.display = 'none'
                             }}
                           />
                         ) : (
@@ -703,133 +697,132 @@ export function SchedulePage() {
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-10">
             {paginatedGroupedByDate.map((group) => (
-            <section key={group.dateKey} className="flex flex-col gap-4">
-              {/* Sticky Date Header */}
-              <div className="sticky top-0 z-10 flex items-center justify-between py-2 px-3.5 rounded-xl bg-card/90 backdrop-blur-md border border-border shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-6 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
-                    <CalendarDays size={13} />
+              <section key={group.dateKey} className="flex flex-col gap-4">
+                {/* Sticky Date Header */}
+                <div className="sticky top-0 z-10 flex items-center justify-between py-2 px-3.5 rounded-xl bg-card/90 backdrop-blur-md border border-border shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="size-6 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
+                      <CalendarDays size={13} />
+                    </div>
+                    <h2 className="text-xs font-bold text-foreground tracking-tight">
+                      {group.header}
+                    </h2>
                   </div>
-                  <h2 className="text-xs font-bold text-foreground tracking-tight">
-                    {group.header}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium border border-border/60">
+                      {group.items.length} Postingan
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium border border-border/60">
-                    {group.items.length} Postingan
-                  </span>
-                </div>
-              </div>
 
-              {/* Compact List / Card View */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {group.items.map((t) => {
-                  const mediaUrl = t.posts?.gdrive_stream_url || t.posts?.gdrive_lh3_url || ''
-                  const scheduledIso = t.posts?.scheduled_at || t.created_at
-                  const timeLabel = formatTimeOnly(scheduledIso)
-                  const isSimulation = Boolean(t.posts?.media_metadata?.is_simulation)
-                  const title = t.posts?.title || t.posts?.content_text || 'Tanpa Judul'
+                {/* Compact List / Card View */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {group.items.map((t) => {
+                    const mediaUrl = t.posts?.gdrive_stream_url || t.posts?.gdrive_lh3_url || ''
+                    const scheduledIso = t.posts?.scheduled_at || t.created_at
+                    const timeLabel = formatTimeOnly(scheduledIso)
+                    const isSimulation = Boolean(t.posts?.media_metadata?.is_simulation)
+                    const title = t.posts?.title || t.posts?.content_text || 'Tanpa Judul'
 
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={() => setSelectedTarget(t)}
-                      className="group flex items-center gap-3.5 p-3 rounded-xl bg-card border border-border hover:border-foreground/30 transition-all cursor-pointer shadow-xs"
-                    >
-                      {/* Compact Thumbnail (16:9 / 4:5 Compact Ratio) */}
-                      <div className="relative size-18 rounded-lg bg-black shrink-0 overflow-hidden flex items-center justify-center">
-                        {mediaUrl ? (
-                          t.posts?.media_type === 'IMAGE' ? (
-                            <img
-                              src={mediaUrl}
-                              alt={title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="relative w-full h-full">
-                              <video
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setSelectedTarget(t)}
+                        className="group flex items-center gap-3.5 p-3 rounded-xl bg-card border border-border hover:border-foreground/30 transition-all cursor-pointer shadow-xs"
+                      >
+                        {/* Compact Thumbnail (16:9 / 4:5 Compact Ratio) */}
+                        <div className="relative size-18 rounded-lg bg-black shrink-0 overflow-hidden flex items-center justify-center">
+                          {mediaUrl ? (
+                            t.posts?.media_type === 'IMAGE' ? (
+                              <img
                                 src={mediaUrl}
-                                preload="metadata"
-                                muted
-                                playsInline
+                                alt={title}
                                 className="w-full h-full object-cover"
+                                loading="lazy"
                               />
-                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                <Play size={12} className="fill-white text-white opacity-80" />
+                            ) : (
+                              <div className="relative w-full h-full">
+                                <video
+                                  src={mediaUrl}
+                                  preload="metadata"
+                                  muted
+                                  playsInline
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                  <Play size={12} className="fill-white text-white opacity-80" />
+                                </div>
                               </div>
-                            </div>
-                          )
-                        ) : (
-                          <Film size={18} className="text-muted-foreground" />
-                        )}
-
-                        {/* Durasi / Media Type Badge */}
-                        {t.posts?.media_metadata?.duration && (
-                          <span className="absolute bottom-1 right-1 font-mono text-[9px] bg-black/80 text-white px-1 rounded">
-                            {t.posts.media_metadata.duration}s
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Content Meta & Details */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          {/* Channel Badge */}
-                          <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground font-mono text-[9px] font-semibold uppercase">
-                            {t.platform}
-                          </span>
-
-                          {/* Time */}
-                          <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
-                            <Clock size={11} />
-                            <span>{timeLabel}</span>
-                          </span>
-
-                          {/* Simulation Flag */}
-                          {isSimulation && (
-                            <span className="font-mono text-[9px] font-bold px-1 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                              SIM
-                            </span>
+                            )
+                          ) : (
+                            <Film size={18} className="text-muted-foreground" />
                           )}
 
-                          {/* Status */}
-                          <span
-                            className={`ml-auto font-mono text-[9px] font-semibold px-1.5 py-0.2 rounded uppercase ${
-                              t.status === 'SUCCESS'
-                                ? 'bg-primary text-primary-foreground'
-                                : t.status === 'FAILED'
-                                ? 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                : 'bg-secondary text-muted-foreground'
-                            }`}
-                          >
-                            {t.status}
-                          </span>
+                          {/* Durasi / Media Type Badge */}
+                          {t.posts?.media_metadata?.duration && (
+                            <span className="absolute bottom-1 right-1 font-mono text-[9px] bg-black/80 text-white px-1 rounded">
+                              {t.posts.media_metadata.duration}s
+                            </span>
+                          )}
                         </div>
 
-                        {/* Title */}
-                        <h4 className="text-xs font-semibold text-foreground truncate" title={title}>
-                          {title}
-                        </h4>
+                        {/* Content Meta & Details */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            {/* Channel Badge */}
+                            <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground font-mono text-[9px] font-semibold uppercase">
+                              {t.platform}
+                            </span>
 
-                        {/* Account Name */}
-                        {t.connected_accounts?.account_name && (
-                          <span className="text-[11px] text-muted-foreground font-mono truncate">
-                            @{t.connected_accounts.account_name}
-                          </span>
-                        )}
-                      </div>
+                            {/* Time */}
+                            <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+                              <Clock size={11} />
+                              <span>{timeLabel}</span>
+                            </span>
 
-                      {/* Right Detail Hint */}
-                      <div className="shrink-0 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all text-xs pr-1">
-                        &rarr;
+                            {/* Simulation Flag */}
+                            {isSimulation && (
+                              <span className="font-mono text-[9px] font-bold px-1 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                SIM
+                              </span>
+                            )}
+
+                            {/* Status */}
+                            <span
+                              className={`ml-auto font-mono text-[9px] font-semibold px-1.5 py-0.2 rounded uppercase ${t.status === 'SUCCESS'
+                                ? 'bg-primary text-primary-foreground'
+                                : t.status === 'FAILED'
+                                  ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                                  : 'bg-secondary text-muted-foreground'
+                                }`}
+                            >
+                              {t.status}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h4 className="text-xs font-semibold text-foreground truncate" title={title}>
+                            {title}
+                          </h4>
+
+                          {/* Account Name */}
+                          {t.connected_accounts?.account_name && (
+                            <span className="text-[11px] text-muted-foreground font-mono truncate">
+                              @{t.connected_accounts.account_name}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Right Detail Hint */}
+                        <div className="shrink-0 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all text-xs pr-1">
+                          &rarr;
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
 
           {renderPagination()}

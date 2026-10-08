@@ -37,8 +37,10 @@ Keluarkan HANYA JSON murni tanpa markdown wrapper/backtick dengan struktur:
 `;
 
   const models = [
+    'gemini-3.8-flash',
     'gemini-3.5-flash-lite',
     'gemini-3.5-flash',
+    'gemini-2.5-flash',
     'gemini-flash-latest'
   ];
 

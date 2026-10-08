@@ -56,31 +56,31 @@ const SUPPORTED_PLATFORMS: PlatformDef[] = [
 ]
 
 const DEFAULT_KNOWLEDGE_SEED = [
-    {
-      id: 'seed-1',
-      title: 'JAGRES Google Review Card',
-      category: 'product',
-      content: 'Kartu NFC & QR untuk mendapatkan review bintang 5 di Google Maps dalam 1 detik tanpa aplikasi tambahan.',
-    },
-    {
-      id: 'seed-2',
-      title: 'Paket Starter Reseller',
-      category: 'offering',
-      content: 'Modal Rp150.000 sudah dapat produk Google Review Card siap jual. Margin keuntungan tinggi hingga 100-200%.',
-    },
-    {
-      id: 'seed-3',
-      title: 'Gaya Bahasa / Tone of Voice',
-      category: 'brand_voice',
-      content: 'Persuasif, edukatif, solutif, dan ramah bisnis. Menghindari kata-kata kaku atau robotik.',
-    },
-    {
-      id: 'seed-4',
-      title: 'Guardrails (Anti-Halusinasi)',
-      category: 'guardrail',
-      content: 'Dilarang menjanjikan review palsu/bot. Wajib mendahulukan angka harga asli yang tertera di gambar poster.',
-    },
-  ]
+  {
+    id: 'seed-1',
+    title: 'JAGRES Google Review Card',
+    category: 'product',
+    content: 'Kartu NFC & QR untuk mendapatkan review bintang 5 di Google Maps dalam 1 detik tanpa aplikasi tambahan.',
+  },
+  {
+    id: 'seed-2',
+    title: 'Paket Starter Reseller',
+    category: 'offering',
+    content: 'Modal Rp150.000 sudah dapat produk Google Review Card siap jual. Margin keuntungan tinggi hingga 100-200%.',
+  },
+  {
+    id: 'seed-3',
+    title: 'Gaya Bahasa / Tone of Voice',
+    category: 'brand_voice',
+    content: 'Persuasif, edukatif, solutif, dan ramah bisnis. Menghindari kata-kata kaku atau robotik.',
+  },
+  {
+    id: 'seed-4',
+    title: 'Guardrails (Anti-Halusinasi)',
+    category: 'guardrail',
+    content: 'Dilarang menjanjikan review palsu/bot. Wajib mendahulukan angka harga asli yang tertera di gambar poster.',
+  },
+]
 
 // ponytail: Helper render markdown presisi tanpa lib berat tambahan
 function parseInlineMarkdown(text: string) {
@@ -308,7 +308,7 @@ export function SettingsPage() {
     try {
       const res = await supabase.from('ai_tuning_knowledge').select('*').eq('is_active', true).order('created_at', { ascending: true })
       if (!res.error && res.data) knowledges = res.data
-    } catch {}
+    } catch { }
 
     const latency = Math.round(performance.now() - startTime)
     setSystemLatency(latency > 0 ? latency : 18)
@@ -491,7 +491,7 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'accounts' | 'knowledge'>('accounts')
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto pb-12">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
       {/* Header Bersih & Ringkas */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div className="flex flex-col gap-1">
@@ -506,22 +506,20 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('accounts')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              activeTab === 'accounts'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${activeTab === 'accounts'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Akun Terhubung ({accounts.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('knowledge')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              activeTab === 'knowledge'
-                ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${activeTab === 'knowledge'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
           >
             Memori AI ({knowledgeList.length})
           </button>
@@ -572,9 +570,8 @@ export function SettingsPage() {
                         </div>
                         {isConnected && (
                           <span
-                            className={`absolute -bottom-1 -right-1 size-3.5 rounded-full flex items-center justify-center text-white ${
-                              hasExpired ? 'bg-amber-500' : 'bg-emerald-600'
-                            }`}
+                            className={`absolute -bottom-1 -right-1 size-3.5 rounded-full flex items-center justify-center text-white ${hasExpired ? 'bg-amber-500' : 'bg-emerald-600'
+                              }`}
                           >
                             {hasExpired ? (
                               <AlertTriangle size={8} strokeWidth={2.5} />
@@ -777,11 +774,10 @@ export function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setKnowledgeTab('write')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
-                      knowledgeTab === 'write'
-                        ? 'bg-white dark:bg-[#202020] text-black dark:text-white shadow-2xs font-semibold'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${knowledgeTab === 'write'
+                      ? 'bg-white dark:bg-[#202020] text-black dark:text-white shadow-2xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                      }`}
                   >
                     <Code size={12} />
                     <span>Tulis</span>
@@ -789,11 +785,10 @@ export function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setKnowledgeTab('preview')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
-                      knowledgeTab === 'preview'
-                        ? 'bg-white dark:bg-[#202020] text-black dark:text-white shadow-2xs font-semibold'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${knowledgeTab === 'preview'
+                      ? 'bg-white dark:bg-[#202020] text-black dark:text-white shadow-2xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                      }`}
                   >
                     <Eye size={12} />
                     <span>Preview</span>

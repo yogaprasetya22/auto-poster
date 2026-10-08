@@ -30,12 +30,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               size="lg"
               className="hover:bg-muted data-[state=open]:bg-muted transition-colors rounded-xl px-2.5 h-12"
             >
-              <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black font-mono font-bold text-sm shadow-xs">
-                OS
+              <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-foreground text-background font-mono font-bold text-sm shadow-xs">
+                AP
               </div>
               <div className="grid flex-1 text-left text-xs leading-tight ml-1">
-                <span className="truncate font-bold tracking-tight text-foreground text-sm">OSM-APE</span>
-                <span className="truncate text-[10px] text-muted-foreground font-mono">AUTONOMOUS ENGINE</span>
+                <span className="truncate font-bold tracking-tight text-foreground text-sm">Auto Poster</span>
+                <span className="truncate text-[10px] text-muted-foreground">Jadwal Konten Otomatis</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -75,13 +75,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         )}
 
-        {/* Nodes Status */}
-        <div className="flex items-center justify-between p-2 rounded border border-border bg-card text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+        {/* Status Sistem */}
+        <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-card text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
           <div className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="truncate font-medium text-foreground">Cluster Live</span>
+            <span className="truncate font-medium text-foreground">Sistem Aktif</span>
           </div>
-          <span className="font-mono text-[10px] px-1 py-0.5 rounded bg-muted">4 NODES</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-foreground font-medium">Siap Kirim</span>
         </div>
       </SidebarFooter>
     </Sidebar>

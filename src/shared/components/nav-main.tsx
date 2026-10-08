@@ -14,12 +14,14 @@ import {
 import {
   LayoutDashboard,
   Layers,
+  Package,
   PenSquare,
   FileText,
   CalendarClock,
   History,
   Settings,
   ChevronDown,
+  Bot,
 } from "lucide-react"
 
 export function NavMain() {
@@ -27,8 +29,9 @@ export function NavMain() {
   
   // Publikasi sub-menu is open if current pathname is in any of its children
   const isPublishingActive =
+    location.pathname === "/products" ||
     location.pathname === "/composer" ||
-    location.pathname === "/drafts" ||
+    location.pathname === "/auto-schedule" ||
     location.pathname === "/schedule" ||
     location.pathname === "/history"
 
@@ -69,7 +72,7 @@ export function NavMain() {
         <SidebarGroupLabel className="px-3 text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold flex items-center justify-between">
           <span>Manajemen Konten</span>
           <span className="text-[9px] px-1.5 py-0.2 rounded bg-muted font-mono font-medium">
-            4 FITUR
+            5 FITUR
           </span>
         </SidebarGroupLabel>
         <SidebarGroupContent className="mt-1">
@@ -79,14 +82,14 @@ export function NavMain() {
               <SidebarMenuButton
                 onClick={() => setIsPublishingOpen((prev) => !prev)}
                 isActive={isPublishingActive && !isPublishingOpen}
-                className="w-full cursor-pointer justify-between rounded-lg font-semibold text-xs h-9.5 px-3 transition-colors bg-muted/40 hover:bg-muted"
+                className="w-full cursor-pointer justify-between rounded-lg font-semibold text-xs h-9 px-3 transition-colors bg-muted/40 hover:bg-muted"
                 tooltip="Publikasi Postingan"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="size-6 rounded-md bg-black text-white dark:bg-white dark:text-black flex items-center justify-center shrink-0 shadow-2xs">
                     <Layers className="size-3.5" />
                   </div>
-                  <span className="font-semibold text-foreground tracking-tight">Publikasi</span>
+                  <span className="font-semibold text-foreground tracking-tight text-xs">Publikasi</span>
                 </div>
                 <ChevronDown
                   className={`size-3.5 text-muted-foreground transition-transform duration-200 ${
@@ -97,62 +100,77 @@ export function NavMain() {
 
               {/* Sub-menu Items */}
               {isPublishingOpen && (
-                <SidebarMenuSub className="mt-1 ml-4 pl-3 border-l-2 border-border/70 flex flex-col gap-1 py-1">
-                  {/* Sub-item 1: Composer (Buat Konten) */}
+                <SidebarMenuSub className="mt-1 ml-4 pl-2.5 border-l-2 border-border/70 flex flex-col gap-0.5 py-0.5">
+                  {/* Sub-item 0: Katalog Produk */}
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
-                      render={<NavLink to="/composer" />}
-                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                      size="sm"
+                      render={<NavLink to="/products" />}
+                      className="w-full cursor-pointer rounded-md text-[11px] font-medium h-7.5 px-2 flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
                     >
-                      <div className="flex items-center gap-2">
-                        <PenSquare className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span>Composer</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Package className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">Katalog Produk</span>
                       </div>
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
-                        AI
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+
+                  {/* Sub-item 1: Posting Manual */}
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      size="sm"
+                      render={<NavLink to="/composer" />}
+                      className="w-full cursor-pointer rounded-md text-[11px] font-medium h-7.5 px-2 flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <PenSquare className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">Posting Manual</span>
+                      </div>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+
+                  {/* Sub-item 2: Jadwal Otomatis AI */}
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      size="sm"
+                      render={<NavLink to="/auto-schedule" />}
+                      className="w-full cursor-pointer rounded-md text-[11px] font-medium h-7.5 px-2 flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Bot className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">Jadwal Auto AI</span>
+                      </div>
+                      <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shrink-0">
+                        BETA
                       </span>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
 
-                  {/* Sub-item 2: Draf Postingan */}
+                  {/* Sub-item 3: Jadwal Antrean */}
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
-                      render={<NavLink to="/drafts" />}
-                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileText className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span>Draf Konten</span>
-                      </div>
-                      <span className="size-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-
-                  {/* Sub-item 3: Jadwal Konten */}
-                  <SidebarMenuSubItem>
-                    <SidebarMenuSubButton
+                      size="sm"
                       render={<NavLink to="/schedule" />}
-                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                      className="w-full cursor-pointer rounded-md text-[11px] font-medium h-7.5 px-2 flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <CalendarClock className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span>Jadwal Tayang</span>
+                        <span className="truncate">Jadwal Antrean</span>
                       </div>
-                      <span className="size-1.5 rounded-full bg-amber-500" />
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
 
-                  {/* Sub-item 4: Riwayat Eksekusi */}
+                  {/* Sub-item 5: Riwayat Postingan */}
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
+                      size="sm"
                       render={<NavLink to="/history" />}
-                      className="w-full cursor-pointer rounded-lg text-xs h-8.5 px-2.5 font-medium flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
+                      className="w-full cursor-pointer rounded-md text-[11px] font-medium h-7.5 px-2 flex items-center justify-between transition-colors [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <History className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span>Riwayat / History</span>
+                        <span className="truncate">Riwayat Postingan</span>
                       </div>
-                      <span className="text-[9px] font-mono text-muted-foreground">Log</span>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 </SidebarMenuSub>

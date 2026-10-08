@@ -61,7 +61,7 @@ export function CaptionEditor() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-black flex items-center gap-1.5" htmlFor="caption-input">
+        <label className="text-xs font-semibold text-foreground flex items-center gap-1.5" htmlFor="caption-input">
           <span className="material-symbols-outlined text-[15px]">notes</span>
           <span>Naskah Caption & Hashtag</span>
         </label>
@@ -76,14 +76,14 @@ export function CaptionEditor() {
             }
           }}
           disabled={isGenerating}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black text-white text-[11px] font-medium hover:bg-[#262626] transition-all cursor-pointer shadow-xs disabled:opacity-50"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary text-foreground hover:bg-secondary/80 text-[11px] font-medium border border-border transition-all cursor-pointer shadow-xs disabled:opacity-50"
         >
           {isGenerating ? (
             <Loader2 className="size-3 animate-spin" />
           ) : (
-            <Wand2 className="size-3 text-foreground" />
+            <Wand2 className="size-3 text-muted-foreground" />
           )}
-          <span>{isGenerating ? 'Menulis...' : 'Generate Caption'}</span>
+          <span>{isGenerating ? 'Menyusun...' : 'Tulis Otomatis'}</span>
         </button>
       </div>
 

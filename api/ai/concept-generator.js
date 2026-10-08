@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   const {
-    productName = 'JAGRES Google Review Card',
+    productName = '',
     instruction = '', // User prompt / tuningan khusus
     tone = 'commercial', // commercial, edu-viral, storytelling, soft-selling
     targetAudience = 'all', // umkm, cafe-resto, klinik-salon, umum
@@ -18,23 +18,24 @@ export default async function handler(req, res) {
   }
 
   const baseKnowledge = await getDynamicKnowledgeContext();
+  const activeProduct = productName || 'Produk Sesuai Database / Brief';
 
   const prompt = `
 Peran Anda adalah AI Creative Strategist & Marketing Director spesialis video konten pendek (TikTok, Instagram Reels, Short Ads).
 
-Konteks Produk & Brand (Gunakan data resmi):
+Konteks Pengetahuan Produk & Brand Resmi dari Database:
 ${baseKnowledge}
 
 Parameter Request:
-- Produk: ${productName}
-- Target Audiens: ${targetAudience} (Konteks pebisnis, UMKM, resto/kafe lokal Indonesia)
+- Produk: ${activeProduct}
+- Target Audiens: ${targetAudience} (Konteks pebisnis, UMKM, atau konsumen lokal Indonesia)
 - Tone Gaya: ${tone}
-- Prompt / Tuningan / Instruksi Khusus User: "${instruction || 'Buatkan konsep iklan video promo yang kuat, memancing rasa penasaran, dan fokus pada manfaat'}"
+- Prompt / Tuningan / Instruksi Khusus User: "${instruction || 'Buatkan konsep iklan video promo yang kuat, memancing rasa penasaran, dan fokus pada keunggulan produk'}"
 
 ATURAN WAJIB LOKAL INDONESIA:
-- Karakter & Pemeran: Orang Indonesia asli (wajah lokal, barista/owner kafe lokal, pelanggan lokal).
+- Karakter & Pemeran: Orang Indonesia asli (wajah lokal, pengusaha/pelanggan lokal).
 - Bahasa: 100% Bahasa Indonesia luwes, percakapan sehari-hari yang persuasif (bukan kaku seperti terjemahan).
-- Latar: Kafe, resto, atau toko UMKM lokal Indonesia.
+- Latar: Setting tempat usaha lokal Indonesia yang relevan dengan produk.
 
 Tugas:
 Tuliskan 1 Draf Konsep / Brief Iklan (Markdown) yang siap dipakai sebagai acuan Storyboard & Video Prompt. 
@@ -42,19 +43,21 @@ Gunakan format markdown yang rapi, padat, dan persuasif.
 
 Struktur Markdown:
 ### [Judul Konsep Singkat & Menarik]
-- **Target**: (Siapa pemilik bisnis / audiens lokal Indonesia yang disasar)
-- **Problem**: (Pain point yang diangkat - contoh: resto ramai tapi ulasan Google Maps sepi)
+- **Target**: (Siapa target persona lokal Indonesia yang disasar)
+- **Problem**: (Pain point atau masalah nyata yang diselesaikan produk)
 - **Hook Utama**: (Kalimat atau aksi pembuka 3 detik pertama pemeran lokal)
 - **Alur Cerita**: (Ringkasan cerita video dengan karakter orang Indonesia)
-- **Penawaran / Promo**: (Highlight harga resmi atau promo mulai Rp25.000)
+- **Penawaran / Promo**: (Highlight penawaran resmi yang tertera pada database knowledge)
 - **Call to Action**: (Ajakan tindakan akhir dalam Bahasa Indonesia)
 
 Berikan HANYA teks markdown tersebut, tanpa basa-basi atau kata pembuka/penutup.
 `;
 
   const models = [
+    'gemini-3.8-flash',
     'gemini-3.5-flash-lite',
     'gemini-3.5-flash',
+    'gemini-2.5-flash',
     'gemini-flash-latest',
   ];
 

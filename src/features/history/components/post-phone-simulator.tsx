@@ -1,10 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
 import { Play, Pause } from 'lucide-react'
 
+export interface CarouselSlideItem {
+  tag?: string
+  title: string
+  desc: string
+  imageUrl?: string
+}
+
 interface PostPhoneSimulatorProps {
   channel?: 'tiktok' | 'reels' | 'threads' | 'facebook'
   mediaUrl: string
-  mediaType?: 'VIDEO' | 'IMAGE'
+  mediaType?: 'VIDEO' | 'IMAGE' | 'CAROUSEL'
+  carouselSlides?: CarouselSlideItem[]
   contentText?: string
   title?: string
   accountName?: string
@@ -14,11 +22,13 @@ export function PostPhoneSimulator({
   channel: initialChannel = 'reels',
   mediaUrl,
   mediaType = 'VIDEO',
+  carouselSlides,
   contentText = '',
   title = '',
   accountName = 'autoposter.agency',
 }: PostPhoneSimulatorProps) {
   const [channel, setChannel] = useState<'tiktok' | 'reels' | 'threads' | 'facebook'>(initialChannel)
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0)
   const [showSafeZone, setShowSafeZone] = useState(false)
   const [isPlaying, setIsPlaying] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
@@ -144,7 +154,73 @@ export function PostPhoneSimulator({
             onClick={togglePlayPause}
             className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-neutral-950 flex items-center justify-center cursor-pointer group"
           >
-            {mediaUrl ? (
+            {mediaType === 'CAROUSEL' && carouselSlides && carouselSlides.length > 0 ? (
+              <div
+                className="w-full h-full relative overflow-hidden flex flex-col justify-between p-5 text-white bg-gradient-to-b from-neutral-900 via-neutral-950 to-black select-none"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Background Image / Pattern if available */}
+                {mediaUrl && (
+                  <img
+                    src={carouselSlides[activeSlideIdx]?.imageUrl || mediaUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-25 filter blur-[1px] pointer-events-none"
+                  />
+                )}
+
+                {/* Top Slide Badge & Pagination Dots */}
+                <div className="relative z-10 pt-7 flex items-center justify-between">
+                  <span className="px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[9px] font-mono tracking-wider border border-white/20">
+                    {carouselSlides[activeSlideIdx]?.tag || `SLIDE ${activeSlideIdx + 1}/${carouselSlides.length}`}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {carouselSlides.map((_, sIdx) => (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={() => setActiveSlideIdx(sIdx)}
+                        className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                          activeSlideIdx === sIdx ? 'w-5 bg-white' : 'w-1.5 bg-white/40'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Middle Content: Card Slide */}
+                <div className="relative z-10 my-auto p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 space-y-2 shadow-2xl">
+                  <h3 className="font-bold text-sm sm:text-base leading-snug drop-shadow-sm">
+                    {carouselSlides[activeSlideIdx]?.title}
+                  </h3>
+                  <p className="text-xs text-white/80 leading-relaxed">
+                    {carouselSlides[activeSlideIdx]?.desc}
+                  </p>
+                </div>
+
+                {/* Bottom Navigation Chevrons */}
+                <div className="relative z-10 pb-12 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSlideIdx((prev) => Math.max(0, prev - 1))}
+                    disabled={activeSlideIdx === 0}
+                    className="px-2.5 py-1 rounded-lg bg-black/60 border border-white/20 text-white text-[10px] font-mono disabled:opacity-30 cursor-pointer"
+                  >
+                    ← Geser Kiri
+                  </button>
+                  <span className="text-[10px] font-mono opacity-60">
+                    {activeSlideIdx + 1} dari {carouselSlides.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSlideIdx((prev) => Math.min(carouselSlides.length - 1, prev + 1))}
+                    disabled={activeSlideIdx === carouselSlides.length - 1}
+                    className="px-2.5 py-1 rounded-lg bg-black/60 border border-white/20 text-white text-[10px] font-mono disabled:opacity-30 cursor-pointer"
+                  >
+                    Geser Kanan →
+                  </button>
+                </div>
+              </div>
+            ) : mediaUrl ? (
               mediaType === 'IMAGE' ? (
                 <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-black">
                   <img

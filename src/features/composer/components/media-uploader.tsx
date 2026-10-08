@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
-import { Upload, X, Film, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Upload, X, Film, Image as ImageIcon, Loader2, Layers, Bot } from 'lucide-react'
 import { useComposerStore } from '../store/use-composer-store'
 import { uploadToGDrive, getVideoDuration } from '@/shared/lib/gdrive'
 import { toast } from 'sonner'
@@ -8,6 +9,7 @@ import { VideoPromptModal } from './video-prompt-modal'
 const MAX_SIZE = 100 * 1024 * 1024 // 100 MB
 
 export function MediaUploader() {
+  const navigate = useNavigate()
   const {
     media,
     mediaItems,
@@ -144,16 +146,18 @@ export function MediaUploader() {
               : 'Upload File Media'}
           </span>
         </label>
-        <div className="flex items-center gap-2">
-          {postFormat === 'VIDEO' && (
+        <div className="flex items-center gap-1.5">
+          {items.length > 0 && (
             <button
               type="button"
-              onClick={() => setIsPromptModalOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary text-foreground hover:bg-secondary/80 font-medium text-[11px] transition-all cursor-pointer border border-border shadow-xs"
+              onClick={() => navigate('/auto-schedule')}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary text-foreground hover:bg-secondary/80 font-medium text-[11px] transition-all cursor-pointer border border-border shadow-xs"
             >
-              <span>Prompt Video</span>
+              <Bot size={12} className="text-muted-foreground" />
+              <span>Jadwal Auto AI</span>
             </button>
           )}
+
           {items.length > 0 && (
             <button
               type="button"
@@ -218,6 +222,34 @@ export function MediaUploader() {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Opsi 1: Buat Otomatis via Studio Konten */}
+      {items.length === 0 && (
+        <div className="p-3.5 rounded-xl border border-border bg-secondary/30 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Layers size={13} className="text-muted-foreground" />
+              <span>Buat Otomatis dari Katalog Produk</span>
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              Susun video Reels atau banner produk langsung tanpa perlu upload manual.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/auto-schedule')}
+            className="px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold transition-opacity hover:opacity-90 shrink-0 cursor-pointer shadow-xs"
+          >
+            Jadwal Auto AI
+          </button>
+        </div>
+      )}
+
+      {items.length === 0 && (
+        <div className="text-[10px] text-muted-foreground text-center font-medium my-0.5">
+          — atau unggah file sendiri dari komputer —
         </div>
       )}
 
@@ -289,6 +321,19 @@ export function MediaUploader() {
             }}
           />
         </label>
+      )}
+
+      {/* Progressive Disclosure: Prompt Kamera Sinematografi untuk Advanced Video Creator */}
+      {postFormat === 'VIDEO' && (
+        <div className="flex items-center justify-end pt-1">
+          <button
+            type="button"
+            onClick={() => setIsPromptModalOpen(true)}
+            className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors cursor-pointer"
+          >
+            Butuh ide visual kamera? Buka Prompt Sinematografi &rarr;
+          </button>
+        </div>
       )}
     </div>
   )
